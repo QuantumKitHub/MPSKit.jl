@@ -59,12 +59,19 @@ Concretely, this is the overlap of the current state with the single-site deriva
 - `backend = DefaultBackend()`: backend for the tensor contractions of the derivative.
 - `allocator = DefaultAllocator()`: allocator serving their scratch space. A sweep that already
   holds one should pass it, rather than leaving this contraction to the garbage collector.
+- `prepare = false`: build the derivative at `pos` from the prepared halves cached in the
+  environments, if they hold them. Preparing costs more than one unprepared application, but an
+  effective Hamiltonian at `pos` built afterwards reuses the halves that are still current.
 """
 function calc_galerkin(
-        pos::Int, below, operator, above, envs;
+        pos::Int, below, operator, above, envs; prepare::Bool = false,
         backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
     )
-    AC´ = AC_projection(pos, below, operator, above, envs; backend, allocator)
+    AC´ = if prepare && has_halves(envs)
+        AC_hamiltonian(pos, below, operator, above, envs; backend, allocator) * above.AC[pos]
+    else
+        AC_projection(pos, below, operator, above, envs; backend, allocator)
+    end
     normalize!(AC´)
     return norm(project_complement!(AC´, below.AL[pos]))
 end

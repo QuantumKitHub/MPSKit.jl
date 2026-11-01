@@ -126,14 +126,34 @@ function changebond!(
         # a sweep that already holds one should pass it: this is called once per site
         allocator = default_allocator(ψ, SerialScheduler()),
     )
-    bond = site
+    # two-site update from the projected effective Hamiltonian
+    AC2 = AC2_projection(site, ψ, H, ψ, envs; alg.backend, allocator)
+    return expand_from_projection!(site, Val(:right), ψ, AC2, alg; normalize)
+end
+function changebond!(
+        site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs;
+        normalize::Bool = true,
+        # a sweep that already holds one should pass it: this is called once per site
+        allocator = default_allocator(ψ, SerialScheduler()),
+    )
+    # two-site update from the projected effective Hamiltonian
+    AC2 = AC2_projection(site - 1, ψ, H, ψ, envs; alg.backend, allocator)
+    return expand_from_projection!(site, Val(:left), ψ, AC2, alg; normalize)
+end
+
+"""
+    expand_from_projection!(site, direction, ψ, AC2, alg::OptimalExpand; normalize = true)
+
+Expand the bond of `site` in `direction` of `ψ` from `AC2`, the projected two-site update of that
+bond, as [`changebond!`](@ref) does after forming it.
+"""
+function expand_from_projection!(
+        site::Int, ::Val{:right}, ψ::AbstractFiniteMPS, AC2, alg::OptimalExpand; normalize::Bool = true
+    )
     left = ψ.AC[site]
     right = ψ.AR[site + 1]
     NL = left_null(left)
     NR = right_null!(_transpose_tail(right; copy = true))
-
-    # two-site update from the projected effective Hamiltonian
-    AC2 = AC2_projection(bond, ψ, H, ψ, envs; alg.backend, allocator)
 
     # select the dominant directions in the complement of the current state
     g2 = adjoint(NL) * AC2 * adjoint(NR)
@@ -155,20 +175,13 @@ function changebond!(
     ψ.AC[site + 1] = (nc, nar)
     return ψ
 end
-function changebond!(
-        site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, H, alg::OptimalExpand, envs;
-        normalize::Bool = true,
-        # a sweep that already holds one should pass it: this is called once per site
-        allocator = default_allocator(ψ, SerialScheduler()),
+function expand_from_projection!(
+        site::Int, ::Val{:left}, ψ::AbstractFiniteMPS, AC2, alg::OptimalExpand; normalize::Bool = true
     )
-    bond = site - 1
     left = ψ.AL[site - 1]
     right = ψ.AC[site]
     NL = left_null(left)
     NR = right_null!(_transpose_tail(right; copy = true))
-
-    # two-site update from the projected effective Hamiltonian
-    AC2 = AC2_projection(bond, ψ, H, ψ, envs; alg.backend, allocator)
 
     # select the dominant directions in the complement of the current state
     g2 = adjoint(NL) * AC2 * adjoint(NR)

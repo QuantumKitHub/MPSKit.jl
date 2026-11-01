@@ -21,7 +21,7 @@ export f_plus_f_min, f_min_f_plus, f_num, f_hopping
 export force_planar
 export symm_mul_mpo
 export transverse_field_ising, heisenberg_XXX, bilinear_biquadratic_model, XY_model, kitaev_model
-export long_range_ising, long_range_ising_infinite
+export long_range_ising, long_range_ising_infinite, three_site_ising, long_range_heisenberg
 export classical_ising_tensors, classical_ising, sixvertex
 export bad_initial_state
 export SCHEDULERS, with_scheduler
@@ -221,6 +221,21 @@ function long_range_ising_infinite(
     ZZ = S_z_S_z(T, sym; spin = 1 // 2) * 4
     lattice = PeriodicArray(fill(space(X, 1), L))
     return InfiniteMPOHamiltonian(lattice, ((i,) => -g * X for i in 1:L)..., (1, L) => -ZZ)
+end
+
+# three-site terms give non-trivial A·A, C·A and A·B channels in the two-site derivatives
+function three_site_ising(T::Type{<:Number} = ComplexF64; g = 2.0, L = 6)
+    X = S_x(T, Trivial; spin = 1 // 2)
+    return transverse_field_ising(T; g, L) + FiniteMPOHamiltonian(
+        fill(space(X, 1), L), (1, 2, 5) => X ⊗ X ⊗ X, (2, 3, 6) => X ⊗ X ⊗ X, (1, 4) => X ⊗ X, (3, 6) => X ⊗ X
+    )
+end
+
+# a Heisenberg chain with longer-range exchanges, which give the SU(2) MPO non-trivial continuing channels
+function long_range_heisenberg(T::Type{<:Number} = ComplexF64, sym::Type{<:Sector} = SU2Irrep; L = 6)
+    H = heisenberg_XXX(T, sym; spin = 1 // 2, L)
+    h = S_exchange(T, sym; spin = 1 // 2)
+    return H + FiniteMPOHamiltonian(fill(space(h, 1), L), (1, 3) => h, (2, 5) => h)
 end
 
 function ising_bond_tensor(β)
