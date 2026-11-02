@@ -17,7 +17,21 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.14.0...HEAD)
+## [Unreleased](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.14.1...HEAD)
+
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Performance
+
+## [0.14.1](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.14.0...v0.14.1) - 2026-11-02
 
 ### Added
 
@@ -30,8 +44,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   almost-Schmidt decomposition of [Parker et al.](https://arxiv.org/abs/1909.06341), and
   `left_canonicalize!`/`right_canonicalize!` bring an `InfiniteMPOHamiltonian` into canonical form. ([#539](https://github.com/QuantumKitHub/MPSKit.jl/pull/539))
 - `linear_solve`/`linear_solve!` for solving `(a₀ + a₁·A)·x = b` with finite MPS `x` and `b`, using the
-  DMRG-style sweeps `DMRGSolve` and `DMRGSolve2`; see [`linear_solve`](@ref) for details.
-- `DynamicalDMRG` gained a `trunc` field for a bond-adaptive `propagator`; see [`DynamicalDMRG`](@ref).
+  DMRG-style sweeps `DMRGSolve` and `DMRGSolve2`; see [`linear_solve`](@ref) for details. ([#479](https://github.com/QuantumKitHub/MPSKit.jl/pull/479))
+- `DynamicalDMRG` gained a `trunc` field for a bond-adaptive `propagator`; see [`DynamicalDMRG`](@ref). ([#479](https://github.com/QuantumKitHub/MPSKit.jl/pull/479))
 
 ### Changed
 
@@ -50,11 +64,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   that keeps the state of an earlier step therefore sees it updated by later steps, as with
   `time_evolve!`. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
 - `propagator`/`DynamicalDMRG` are now implemented on top of `linear_solve`, which changes the default
-  convergence criterion, `tol` and local solver; `Jeckelmann` now throws for real `z`.
-
-### Deprecated
-
-### Removed
+  convergence criterion, `tol` and local solver. ([#479](https://github.com/QuantumKitHub/MPSKit.jl/pull/479))
+- `VOMPS` computes the `AC` and `C` projections of a site with `tforeach`, so they follow the chosen
+  scheduler instead of always spawning tasks. ([#542](https://github.com/QuantumKitHub/MPSKit.jl/pull/542))
 
 ### Fixed
 
@@ -69,8 +81,14 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
 - `TDVP`, `TDVP2` and `BUG` promote a real state to complex for imaginary-time evolution with a
   complex time step, rather than failing. ([#537](https://github.com/QuantumKitHub/MPSKit.jl/pull/537))
+- `DynamicalDMRG` with the `Jeckelmann` flavour throws an `ArgumentError` for real `z` instead of
+  returning `-Inf`. ([#479](https://github.com/QuantumKitHub/MPSKit.jl/pull/479))
 
 ### Performance
+
+- Finite `DMRG`, `DMRG2` and other finite sweeps cache the prepared halves of the effective
+  Hamiltonians in `FiniteEnvironments`, reusing them across local updates and for the DMRG Galerkin
+  error. ([#546](https://github.com/QuantumKitHub/MPSKit.jl/pull/546))
 
 ## [0.14.0](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.13.13...v0.14.0) - 2026-10-05
 
