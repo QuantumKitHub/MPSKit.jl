@@ -247,6 +247,16 @@ end
 
     ψ = FiniteMPS(rand, ComplexF64, L, pspace, ℙ^4)
     @test expectation_value(ψ, H′) ≈ expectation_value(ψ, H) rtol = 1.0e-10
+
+    # operators with a non-zero trace lost precision geometrically with distance in v0.14.0 (#550)
+    pspace = ℂ^4
+    L = 30
+    n = TensorMap(ComplexF64[1 0 0 0; 0 0 0 0; 0 0 1 0; 0 0 0 0], pspace ← pspace)
+    H = FiniteMPOHamiltonian(fill(pspace, L), (5, 25) => n ⊗ n)
+
+    H′ = changebonds(H, SvdCut(; trunc = trunctol(; rtol = 0.0)))
+    ψ = FiniteMPS(rand, ComplexF64, L, pspace, ℂ^8)
+    @test expectation_value(ψ, H′) ≈ expectation_value(ψ, H) rtol = 1.0e-10
 end
 
 @testset "SvdCut on InfiniteMPOHamiltonian $(spacetype(pspace))" for (pspace, Dspace) in spacelist
