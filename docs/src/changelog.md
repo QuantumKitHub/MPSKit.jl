@@ -131,9 +131,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   aliases for multiline objects with infinite or finite lines. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 - Makie.jl plotting functions `entanglement_plot` and `transfer_plot`, and their mutating
   counterparts `entanglement_plot!` and `transfer_plot!`, through a new `MPSKitMakieExt` package
-  extension that is loaded with any Makie backend (e.g. `using CairoMakie`). They are regular Makie
-  recipes: axis styling goes through `axis = (; ...)`, and `axislegend(ax)` lists the sectors.
-  ([#428](https://github.com/QuantumKitHub/MPSKit.jl/pull/428))
+  extension that is loaded with any Makie backend (e.g. `using CairoMakie`). ([#428](https://github.com/QuantumKitHub/MPSKit.jl/pull/428))
 
 ### Changed
 
