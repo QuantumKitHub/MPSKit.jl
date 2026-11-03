@@ -1,7 +1,7 @@
 println("
----------------------
-|   Plot tests       |
----------------------
+-----------------------------------
+|     Plot tests with Plots.jl    |
+-----------------------------------
 ")
 
 using .TestSetup
@@ -13,6 +13,6 @@ using Plots
 
 @testset "plot tests" begin
     ψ = InfiniteMPS([ℙ^2], [ℙ^5])
-    @test transferplot(ψ) isa Plots.Plot
-    @test entanglementplot(ψ) isa Plots.Plot
+    @test (@test_deprecated transferplot(ψ)) isa Plots.Plot
+    @test (@test_deprecated entanglementplot(ψ)) isa Plots.Plot
 end
