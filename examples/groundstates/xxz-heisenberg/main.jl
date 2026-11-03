@@ -5,7 +5,7 @@ In this file we will give step by step instructions on how to analyze the spin 1
 The necessary packages to follow this tutorial are:
 """
 
-using MPSKit, TensorKit, Plots
+using MPSKit, TensorKit, CairoMakie
 include(joinpath(@__DIR__, "..", "..", "..", "docs", "src", "assets", "models.jl")) #hide
 using .ExampleModels
 
@@ -52,7 +52,7 @@ Convergence is quite slow and even fails after sufficiently many iterations.
 To understand why, we can look at the transfer matrix spectrum.
 """
 
-transferplot(groundstate, groundstate)
+transfer_plot(groundstate, groundstate)
 
 md"""
 We can clearly see multiple eigenvalues close to the unit circle.
@@ -89,7 +89,7 @@ The reason behind this becomes more obvious at higher bond dimensions:
 groundstate, envs, info = find_groundstate(
     state, H2, IDMRG2(; trunc = truncrank(50), maxiter = 20, tol = 1.0e-12, verbosity = 1)
 );
-entanglementplot(groundstate)
+entanglement_plot(groundstate)
 
 md"""
 We see that some eigenvalues clearly belong to a group, and are almost degenerate.

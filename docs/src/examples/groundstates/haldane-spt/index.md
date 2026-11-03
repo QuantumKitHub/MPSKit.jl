@@ -30,7 +30,7 @@ Consequently, the Hamiltonian also commutes with all elements of $SU(2)$.
 ````julia
 using TensorKit
 using MPSKit
-using Plots
+using CairoMakie
 
 casimir(s::SU2Irrep) = s.j * (s.j + 1)
 
@@ -86,7 +86,9 @@ V_wrong = SU2Space(0 => 8, 1 // 2 => 8, 1 => 3, 3 // 2 => 3)
 ψ = InfiniteMPS(ℋ, V_wrong)
 ψ, environments, info = find_groundstate(ψ, H, VUMPS(; maxiter = 10))
 sectors = SU2Irrep[0, 1 // 2, 1, 3 // 2]
-transferplot(ψ; sectors, title = "Transfer matrix spectrum", legend = :outertop)
+fig, ax, _ = transfer_plot(ψ; sectors, axis = (; title = "Transfer matrix spectrum"))
+Legend(fig[1, 2], ax)
+fig
 ````
 
 ![](figure-1.png)
@@ -109,7 +111,7 @@ E_plus = expectation_value(ψ_plus, H)
 ````
 
 ````
--1.4014193313393006 - 2.5835641861230988e-17im
+-1.4014193313392986 - 8.756815314957244e-17im
 ````
 
 ````julia
@@ -120,27 +122,24 @@ E_minus = expectation_value(ψ_minus, H)
 ````
 
 ````
--1.4014839739630836 + 1.5092213828325467e-16im
+-1.4014839739630836 + 1.7354249253639237e-16im
 ````
 
 ````julia
-transferp_plus = transferplot(
-    ψ_plus;
-    sectors = SU2Irrep[0, 1, 2], title = "ψ_plus", legend = :outertop
-)
-transferp_minus = transferplot(
-    ψ_minus;
-    sectors = SU2Irrep[0, 1, 2], title = "ψ_minus", legend = :outertop
-)
-plot(transferp_plus, transferp_minus; layout = (1, 2), size = (800, 400))
+fig = Figure(; size = (800, 400))
+ax, _ = transfer_plot(fig[1, 1], ψ_plus; sectors = SU2Irrep[0, 1, 2], axis = (; title = "ψ_plus"))
+transfer_plot(fig[1, 2], ψ_minus; sectors = SU2Irrep[0, 1, 2], axis = (; title = "ψ_minus"))
+Legend(fig[2, 1:2], ax; orientation = :horizontal)
+fig
 ````
 
 ![](figure-2.png)
 
 ````julia
-entanglementp_plus = entanglementplot(ψ_plus; title = "ψ_plus", legend = :outertop)
-entanglementp_minus = entanglementplot(ψ_minus; title = "ψ_minus", legend = :outertop)
-plot(entanglementp_plus, entanglementp_minus; layout = (1, 2), size = (800, 400))
+fig = Figure(; size = (800, 400))
+entanglement_plot(fig[1, 1], ψ_plus; axis = (; title = "ψ_plus"))
+entanglement_plot(fig[1, 2], ψ_minus; axis = (; title = "ψ_minus"))
+fig
 ````
 
 ![](figure-3.png)
@@ -166,8 +165,8 @@ println("S_plus = $S_plus")
 ````
 
 ````
-S_minus + log(2) = 1.5486227235411327
-S_plus = 1.5450323530595034
+S_minus + log(2) = 1.5486227235433714
+S_plus = 1.5450323530591996
 
 ````
 

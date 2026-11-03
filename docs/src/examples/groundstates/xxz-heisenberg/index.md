@@ -12,7 +12,7 @@ In this file we will give step by step instructions on how to analyze the spin 1
 The necessary packages to follow this tutorial are:
 
 ````julia
-using MPSKit, TensorKit, Plots
+using MPSKit, TensorKit, CairoMakie
 using .ExampleModels
 ````
 
@@ -94,7 +94,7 @@ Convergence is quite slow and even fails after sufficiently many iterations.
 To understand why, we can look at the transfer matrix spectrum.
 
 ````julia
-transferplot(groundstate, groundstate)
+transfer_plot(groundstate, groundstate)
 ````
 
 ![](figure-1.png)
@@ -137,7 +137,7 @@ groundstate, envs, info = find_groundstate(
 ````
 
 ````
-┌ Warning: VUMPS cancel 100:	obj = -8.862417624752e-01	err = 4.2010390011e-06	time = 2.81 sec
+┌ Warning: VUMPS cancel 100:	obj = -8.862417624752e-01	err = 4.2010390011e-06	time = 2.36 sec
 └ @ MPSKit src/algorithms/groundstate/vumps.jl:96
 
 ````
@@ -149,7 +149,7 @@ The reason behind this becomes more obvious at higher bond dimensions:
 groundstate, envs, info = find_groundstate(
     state, H2, IDMRG2(; trunc = truncrank(50), maxiter = 20, tol = 1.0e-12, verbosity = 1)
 );
-entanglementplot(groundstate)
+entanglement_plot(groundstate)
 ````
 
 ![](figure-2.png)
