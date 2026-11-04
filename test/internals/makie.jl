@@ -38,6 +38,8 @@ end
     @test axislegend(ax) isa Legend
     _, _, p = transfer_plot(ψ; sectors = [unit(sectortype(ψ))])
     @test length(p.plots) == 1
+    θs = MPSKit.transfer_plot_data(ψ; thetaorigin = -π).θs
+    @test all(θ -> -π <= θ < π, reduce(vcat, θs))
 end
 
 @testset "coexistence with Plots.jl" begin

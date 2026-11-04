@@ -1,7 +1,7 @@
 module MPSKitMakieExt
 
 using Makie
-using MPSKit: MPSKit, AbstractMPS, entanglement_spectrum, transfer_spectrum, _firstspace
+using MPSKit: MPSKit, AbstractMPS, _firstspace
 using TensorKit: dim
 import MPSKit: entanglement_plot, entanglement_plot!, transfer_plot, transfer_plot!
 
@@ -16,22 +16,9 @@ import MPSKit: entanglement_plot, entanglement_plot!, transfer_plot, transfer_pl
     markersize = @inherit markersize
 end
 
-function entanglement_data(mps, site, expand_symmetry, sortby, margin)
-    spectra = entanglement_spectrum(mps, site)
-    sectors = collect(keys(spectra))
-    spectrum = map(sectors) do c
-        b = collect(Float64, spectra[c])
-        return expand_symmetry ? sort!(repeat(b, dim(c)); rev = true) : b
-    end
-    dropped = any(<=(0), Iterators.flatten(spectrum))
-    order = sortperm(spectrum; by = sortby, rev = true)
-    spectrum, sectors = spectrum[order], sectors[order]
-    points = map(enumerate(spectrum)) do (i, values)
-        n = length(values)
-        xs = n == 1 ? [i + 0.5] : range(i + float(margin), i + 1 - float(margin); length = n)
-        return [Point2d(x, y) for (x, y) in zip(xs, values) if y > 0]
-    end
-    return (; sectors, points, dropped)
+function entanglement_data(mps, site, expand_symmetry, sortby, sector_margin)
+    data = MPSKit.entanglement_plot_data(mps, site; expand_symmetry, sortby, sector_margin)
+    return (; data.sectors, points = map((x, y) -> Point2d.(x, y), data.xs, data.ys), data.dropped)
 end
 
 function Makie.plot!(p::Entanglement_Plot)
@@ -74,18 +61,9 @@ Makie.convert_arguments(::Type{<:Transfer_Plot}, above::AbstractMPS) = (above, a
 
 function transfer_data(above, below, sectors, transferkwargs, thetaorigin)
     # Makie stores NamedTuple attributes as nested `Attributes` of observables
-    kwargs = (; (k => to_value(v) for (k, v) in pairs(transferkwargs))...)
-    if sectors !== nothing && get(kwargs, :howmany, 20) isa Int
-        howmany = Dict(c => get(kwargs, :howmany, 20) for c in sectors)
-        kwargs = (; kwargs..., howmany)
-    end
-    spectra = transfer_spectrum(above, below; kwargs...)
-    plotted = [c for c in keys(spectra) if sectors === nothing || c in sectors]
-    points = map(plotted) do c
-        θs = mod2pi.(angle.(spectra[c]) .- thetaorigin) .+ thetaorigin
-        return Point2d.(θs, abs.(spectra[c]))
-    end
-    return (; sectors = plotted, points)
+    transferkwargs = (; (k => to_value(v) for (k, v) in pairs(transferkwargs))...)
+    data = MPSKit.transfer_plot_data(above, below; sectors, transferkwargs, thetaorigin)
+    return (; data.sectors, points = map((θ, r) -> Point2d.(θ, r), data.θs, data.rs))
 end
 
 function Makie.plot!(p::Transfer_Plot)

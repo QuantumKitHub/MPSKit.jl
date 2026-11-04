@@ -123,3 +123,41 @@ Plot the partial transfer matrix spectrum of two InfiniteMPS's using
     be able to use this function.
 """
 function transferplot end
+
+# Backend-independent data for the plotting extensions, one entry per sector.
+function entanglement_plot_data(
+        mps, site = 0; expand_symmetry = false, sortby = maximum, sector_margin = 1 // 10
+    )
+    spectra = entanglement_spectrum(mps, site)
+    sectors = collect(keys(spectra))
+    ys = map(sectors) do c
+        b = collect(Float64, spectra[c])
+        return expand_symmetry ? sort!(repeat(b, dim(c)); rev = true) : b
+    end
+    order = sortperm(ys; by = sortby, rev = true)
+    sectors, ys = sectors[order], ys[order]
+    dropped = any(y -> any(<=(0), y), ys)
+    ys = [filter(>(0), y) for y in ys]
+    margin = float(sector_margin)
+    xs = map(enumerate(ys)) do (i, y)
+        n = length(y)
+        return n == 1 ? [i + 0.5] : collect(range(i + margin, i + 1 - margin; length = n))
+    end
+    return (; sectors, xs, ys, dropped)
+end
+
+function transfer_plot_data(
+        above, below = above; sectors = nothing, transferkwargs = (;), thetaorigin = 0
+    )
+    kwargs = (; transferkwargs...)
+    if sectors !== nothing && get(kwargs, :howmany, 20) isa Int
+        # restrict the computation to the requested sectors
+        howmany = Dict(c => get(kwargs, :howmany, 20) for c in sectors)
+        kwargs = (; kwargs..., howmany)
+    end
+    spectra = transfer_spectrum(above, below; kwargs...)
+    plotted = [c for c in keys(spectra) if sectors === nothing || c in sectors]
+    θs = [mod2pi.(angle.(spectra[c]) .- thetaorigin) .+ thetaorigin for c in plotted]
+    rs = [abs.(spectra[c]) for c in plotted]
+    return (; sectors = plotted, θs, rs)
+end

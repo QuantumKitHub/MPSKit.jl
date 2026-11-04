@@ -15,45 +15,16 @@ import MPSKit: entanglementplot, transferplot
         :entanglementplot
     )
     mps = h.args[1]
+    (; sectors, xs, ys, dropped) = MPSKit.entanglement_plot_data(
+        mps, site; expand_symmetry, sortby, sector_margin
+    )
+    dropped && @warn "Entanglement spectrum contains vanishing Schmidt values. These are omitted from the plot."
 
-    spectra = entanglement_spectrum(mps, site)
-    sectors = []
-    spectrum = []
-    for (c, b) in pairs(spectra)
-        if expand_symmetry # Duplicate entries according to the quantum dimension.
-            b′ = repeat(b, dim(c))
-            sort!(b′; rev = true)
-            push!(spectrum, b′)
-        else
-            push!(spectrum, b)
-        end
-        push!(sectors, c)
-    end
-
-    if any(v -> any(<=(0), v), spectrum)
-        @warn "Entanglement spectrum contains vanishing Schmidt values. These are omitted from the plot."
-        spectrum = [filter(>(0), v) for v in spectrum]
-    end
-
-    if length(spectrum) > 1
-        order = sortperm(spectrum; by = sortby, rev = true)
-        spectrum = spectrum[order]
-        sectors = sectors[order]
-    end
-
-    for (i, (partial_spectrum, sector)) in enumerate(zip(spectrum, sectors))
+    for (x, y, sector) in zip(xs, ys, sectors)
         @series begin
             seriestype := :scatter
             label := sector_formatter(sector)
-            n_spectrum = length(partial_spectrum)
-
-            # Put single dot in the middle, or a linear range with padding.
-            if n_spectrum == 1
-                x = [i + 1 // 2]
-            else
-                x = range(i + sector_margin, i + 1 - sector_margin; length = n_spectrum)
-            end
-            return x, partial_spectrum
+            return x, y
         end
     end
 
@@ -86,18 +57,9 @@ end
         "`transferplot` (Plots.jl) is deprecated, use `transfer_plot` (Makie.jl) instead.",
         :transferplot
     )
-    below = length(h.args) == 1 ? h.args[1] : h.args[2]
-    kwargs = (; transferkwargs...)
-    if sectors !== nothing && get(kwargs, :howmany, 20) isa Int
-        # restrict the computation to the requested sectors
-        howmany = Dict(c => get(kwargs, :howmany, 20) for c in sectors)
-        kwargs = (; kwargs..., howmany)
-    end
-    spectra = transfer_spectrum(h.args[1], below; kwargs...)
+    data = MPSKit.transfer_plot_data(h.args...; sectors, transferkwargs, thetaorigin)
 
-    for (sector, spectrum) in pairs(spectra)
-        sectors === nothing || sector in sectors || continue
-
+    for (θ, r, sector) in zip(data.θs, data.rs, data.sectors)
         @series begin
             yguide --> "r"
             ylims --> (-Inf, 1.05)
@@ -110,7 +72,7 @@ end
             seriestype := :scatter
             markershape --> :auto
             label := sector_formatter(sector)
-            return mod2pi.(angle.(spectrum) .- thetaorigin) .+ thetaorigin, abs.(spectrum)
+            return θ, r
         end
     end
 
