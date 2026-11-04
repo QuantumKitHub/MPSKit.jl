@@ -3,14 +3,13 @@ using TensorKitTensors.BosonOperators: b_min, b_plus_b_min, b_min_b_plus, b_num
 using MPSKit, TensorKit
 include(joinpath(@__DIR__, "..", "..", "..", "docs", "src", "assets", "models.jl")) #hide
 using .ExampleModels
-using Plots, LaTeXStrings
+using CairoMakie
 
 #src # for reproducibility:
 #src using Random
 #src Random.seed!(123)
 
-theme(:wong)
-default(fontfamily = "Computer Modern", label = nothing, dpi = 100, framestyle = :box)
+set_theme!(theme_latexfonts())
 
 md"""
 # 1D Bose-Hubbard model
@@ -131,8 +130,12 @@ In case of the Hamiltonian, it is not necessary to specify the indices as it spa
 We can now plot the correlation function $⟨â^{†}_i â_j⟩$.
 """
 
-plot(map(i -> real.(expectation_value(ground_state, (0, i) => a_op' ⊗ a_op)), 1:50), lw = 2, xlabel = "Site index", ylabel = "Correlation function", yscale = :log10)
-hline!([abs2(expectation_value(ground_state, (0,) => a_op))], ls = :dash, c = :black)
+fig, ax, _ = lines(
+    map(i -> real.(expectation_value(ground_state, (0, i) => a_op' ⊗ a_op)), 1:50);
+    linewidth = 2, axis = (; xlabel = "Site index", ylabel = "Correlation function", yscale = log10)
+)
+hlines!(ax, abs2(expectation_value(ground_state, (0,) => a_op)); linestyle = :dash, color = :black)
+fig
 
 md"""
 We see that the correlations drop off exponentially, indicating the existence of a gapped Mott insulating phase.
@@ -141,8 +144,13 @@ Let us now shift our parameters to probe other phases.
 
 ground_state = get_ground_state(0.5, 0.2, cutoff, D; tol = 1.0e-6, verbosity = 2, maxiter = 500)
 
-plot(map(i -> real.(expectation_value(ground_state, (0, i) => a_op' ⊗ a_op)), 1:100), lw = 2, xlabel = "Site index", ylabel = "Correlation function", yscale = :log10, xscale = :log10)
-hline!([abs2(expectation_value(ground_state, (0,) => a_op))], ls = :dash, c = :black)
+fig, ax, _ = lines(
+    map(i -> real.(expectation_value(ground_state, (0, i) => a_op' ⊗ a_op)), 1:100);
+    linewidth = 2,
+    axis = (; xlabel = "Site index", ylabel = "Correlation function", xscale = log10, yscale = log10)
+)
+hlines!(ax, abs2(expectation_value(ground_state, (0,) => a_op)); linestyle = :dash, color = :black)
+fig
 
 md"""
 In this case, the correlation function drops off algebraically and eventually saturates as $\lim_{i → ∞}⟨â_i^{†} â_j⟩ ≈ ⟨â_i^{†}⟩ ⟨â_j⟩ = |⟨a_i⟩|^2 ≠ 0$.
@@ -171,31 +179,26 @@ Threads.@threads for idx in eachindex(Ds)
     two_point_correlation[idx, :] .= real.(expectation_value(states[idx], (1, i) => a_op' ⊗ a_op) for i in 1:npoints)
 end
 
-p = plot(
-    framestyle = :box, ylabel = "Correlation function " * L"\langle a_i^{\dagger}a_j \rangle",
-    xlabel = "Distance " * L"|i-j|", xscale = :log10, yscale = :log10,
-    xticks = ([10, 100], ["10", "100"]),
-    yticks = ([0.25, 0.5, 1.0], ["0.25", "0.5", "1.0"])
+fig = Figure()
+ax = Axis(
+    fig[1, 1];
+    xlabel = L"\text{Distance } |i-j|",
+    ylabel = L"\text{Correlation function } \langle a_i^{\dagger}a_j \rangle",
+    xscale = log10, yscale = log10, xticks = [10, 100], yticks = [0.25, 0.5, 1.0]
 )
+for (D, correlation) in zip(Ds, eachrow(two_point_correlation))
+    lines!(ax, 2:npoints, correlation[2:end]; label = "D = $D", linewidth = 2)
+end
+axislegend(ax)
 
-plot!(
-    p, 2:npoints, two_point_correlation[:, 2:end]',
-    lab = "D = " .* string.(permutedims(Ds)), lw = 2
+inset = Axis(
+    fig[1, 1]; width = Relative(0.25), height = Relative(0.25), halign = 0.27, valign = 0.32,
+    xlabel = "Bond dimension", ylabel = "Correlation length", xlabelsize = 10, ylabelsize = 10,
+    xscale = log10, yscale = log10, xticks = 20:10:50, yticks = [50, 100],
+    limits = ((15, 60), (20, 130))
 )
-
-scatter!(
-    p, Ds, map(ψ -> correlation_length(ψ; sector = leftunit(ψ)), states),
-    ylabel = "Correlation length", xlabel = "Bond dimension",
-    xscale = :log10, yscale = :log10,
-    inset = bbox(0.2, 0.51, 0.25, 0.25),
-    subplot = 2,
-    xticks = (20:10:50, string.(20:10:50)),
-    yticks = ([50, 100], string.([50, 100])),
-    xlabelfontsize = 8,
-    ylabelfontsize = 8,
-    ylims = [20, 130],
-    xlims = [15, 60]
-)
+scatter!(inset, Ds, map(ψ -> correlation_length(ψ; sector = leftunit(ψ)), states))
+fig
 
 md"""
 This shows that any finite bond dimension MPS necessarily breaks the symmetry of the system, forming a Bose-Einstein condensate which introduces erroneous long-distance behaviour of correlation functions.
@@ -247,7 +250,13 @@ momentum_distribution = map(
     )
 )
 momentum_distribution = vcat(momentum_distribution...)'
-plot(ks, momentum_distribution, lab = "D = " .* string.(permutedims(Ds)), lw = 1.5, xlabel = "Momentum k", ylabel = L"\langle n_k \rangle", ylim = [0, 50])
+fig = Figure()
+ax = Axis(fig[1, 1]; xlabel = "Momentum k", ylabel = L"\langle n_k \rangle", limits = (nothing, (0, 50)))
+for (D, n_k) in zip(Ds, eachcol(momentum_distribution))
+    lines!(ax, ks, n_k; label = "D = $D", linewidth = 1.5)
+end
+axislegend(ax)
+fig
 
 md"""
 We see that the density seems to peak around $k=0$, this time seemingly becoming more prominent as $D → ∞$ which seems to suggest again that there is a condensate.
@@ -300,7 +309,13 @@ function superfluid_stiffness_profile(t, mu, D, cutoff, ϵ = 1.0e-4, npoints = 1
         energies[idx] = real(expectation_value(state_twisted, hamiltonian_twisted))
     end
 
-    return plot(phis, energies, lw = 2, xlabel = "Phase twist per site" * L"(\phi)", ylabel = "Ground state energy", title = "t = $t | μ = $mu | D = $D | cutoff = $cutoff")
+    return lines(
+        phis, energies; linewidth = 2,
+        axis = (;
+            xlabel = L"\text{Phase twist per site } (\phi)", ylabel = "Ground state energy",
+            title = "t = $t | μ = $mu | D = $D | cutoff = $cutoff",
+        )
+    )
 end
 
 superfluid_stiffness_profile(0.2, 0.3, 5, 4) # superfluid
@@ -327,7 +342,12 @@ Threads.@threads for (i, j) in collect(Iterators.product(eachindex(mus), eachind
     order_parameters[i, j] = abs(expectation_value(state, 0 => a_op))
 end
 
-heatmap(ts, mus, order_parameters, xlabel = L"t/U", ylabel = L"\mu/U", title = L"\langle \hat{a}_i \rangle")
+fig, ax, hm = heatmap(
+    ts, mus, permutedims(order_parameters);
+    axis = (; xlabel = L"t/U", ylabel = L"\mu/U", title = L"\langle \hat{a}_i \rangle")
+)
+Colorbar(fig[1, 2], hm)
+fig
 
 md"""
 Although the bond dimension here is quite low, we already see the deformation of the Mott insulator lobes to give way to the well known BKT transition that happens at commensurate density.

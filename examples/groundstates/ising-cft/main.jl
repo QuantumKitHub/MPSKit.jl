@@ -5,7 +5,7 @@ This tutorial is meant to show the finite size CFT spectrum for the quantum Isin
 We do this by first employing an exact diagonalization technique, and then extending the analysis to larger system sizes through the use of MPS techniques.
 """
 
-using MPSKit, TensorKit, Plots, KrylovKit
+using MPSKit, TensorKit, CairoMakie, KrylovKit
 include(joinpath(@__DIR__, "..", "..", "..", "docs", "src", "assets", "models.jl")) #hide
 using .ExampleModels
 using LinearAlgebra: eigvals, diagm, Hermitian
@@ -25,10 +25,7 @@ Thus, optimizing the middle tensor is equivalent to optimizing a state in the en
 """
 
 energies, states = exact_diagonalization(H; num = 18, alg = Lanczos(; krylovdim = 200));
-plot(
-    real.(energies);
-    seriestype = :scatter, legend = false, ylabel = "energy", xlabel = "#eigenvalue"
-)
+scatter(real.(energies); axis = (; xlabel = "#eigenvalue", ylabel = "energy"))
 
 md"""
 !!! note "Krylov dimension"
@@ -95,14 +92,12 @@ v = 2.0
 Δ = real.(energies[1:18] .- energies[1]) ./ (2π * v / L)
 S = momenta ./ (2π / L)
 
-p = plot(
-    S, real.(Δ);
-    seriestype = :scatter, xlabel = "conformal spin (S)", ylabel = "scaling dimension (Δ)",
-    legend = false
+fig, ax, _ = scatter(
+    S, real.(Δ); axis = (; xlabel = "conformal spin (S)", ylabel = "scaling dimension (Δ)")
 )
-vline!(p, -3:3; color = "gray", linestyle = :dash)
-hline!(p, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color = "gray", linestyle = :dash)
-p
+vlines!(ax, -3:3; color = :gray, linestyle = :dash)
+hlines!(ax, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color = :gray, linestyle = :dash)
+fig
 
 md"""
 ## Finite bond dimension
@@ -139,11 +134,9 @@ v = 2.0
 Δ_mps = real.(energies_mps[1:18] .- energies_mps[1]) ./ (2π * v / L_mps)
 S_mps = momenta_mps ./ (2π / L_mps)
 
-p_mps = plot(
-    S_mps, real.(Δ_mps);
-    seriestype = :scatter, xlabel = "conformal spin (S)",
-    ylabel = "scaling dimension (Δ)", legend = false
+fig, ax, _ = scatter(
+    S_mps, real.(Δ_mps); axis = (; xlabel = "conformal spin (S)", ylabel = "scaling dimension (Δ)")
 )
-vline!(p_mps, -3:3; color = "gray", linestyle = :dash)
-hline!(p_mps, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color = "gray", linestyle = :dash)
-p_mps
+vlines!(ax, -3:3; color = :gray, linestyle = :dash)
+hlines!(ax, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color = :gray, linestyle = :dash)
+fig

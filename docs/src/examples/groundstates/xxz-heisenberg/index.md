@@ -70,7 +70,7 @@ info
 ````
 AlgorithmInfo:
   converged          = false after 200 iterations
-  galerkin           = 0.370633
+  galerkin           = 0.37968
 
 ````
 
@@ -86,7 +86,7 @@ info
 ````
 AlgorithmInfo:
   converged          = false after 20 iterations
-  gradientnorm       = 0.00747596
+  gradientnorm       = 0.00594684
 
 ````
 
@@ -137,7 +137,7 @@ groundstate, envs, info = find_groundstate(
 ````
 
 ````
-┌ Warning: VUMPS cancel 100:	obj = -8.862417624752e-01	err = 4.2010390011e-06	time = 2.36 sec
+┌ Warning: VUMPS cancel 100:	obj = -8.862417624752e-01	err = 4.2010394685e-06	time = 2.25 sec
 └ @ MPSKit src/algorithms/groundstate/vumps.jl:96
 
 ````

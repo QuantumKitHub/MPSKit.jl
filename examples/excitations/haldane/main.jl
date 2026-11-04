@@ -5,7 +5,7 @@ In this tutorial we will calculate the Haldane gap (the energy gap in the ``S = 
 To follow the tutorial you need the following packages:
 """
 
-using MPSKit, TensorKit, Plots, Polynomials
+using MPSKit, TensorKit, CairoMakie, Polynomials
 include(joinpath(@__DIR__, "..", "..", "..", "docs", "src", "assets", "models.jl")) #hide
 using .ExampleModels
 using TensorKitTensors.SpinOperators: S_exchange
@@ -54,16 +54,19 @@ md"""
 We can go even further and doublecheck the claim that ``S = 1`` is an edge excitation, by plotting the energy density.
 """
 
-p_density = plot(; xaxis = "position", yaxis = "energy density")
 excited_1 = convert(FiniteMPS, st_1[1])
 excited_2 = convert(FiniteMPS, st_2[1])
 SS = -S_exchange(ComplexF64, SU2Irrep; spin = 1)
 e₀ = [real(expectation_value(ψ, (i, i + 1) => SS)) for i in 1:(L - 1)]
 e₁ = [real(expectation_value(excited_1, (i, i + 1) => SS)) for i in 1:(L - 1)]
 e₂ = [real(expectation_value(excited_2, (i, i + 1) => SS)) for i in 1:(L - 1)]
-plot!(p_density, e₀; label = "S = 0")
-plot!(p_density, e₁; label = "S = 1")
-plot!(p_density, e₂; label = "S = 2")
+fig = Figure()
+ax = Axis(fig[1, 1]; xlabel = "position", ylabel = "energy density")
+lines!(ax, e₀; label = "S = 0")
+lines!(ax, e₁; label = "S = 1")
+lines!(ax, e₂; label = "S = 2")
+axislegend(ax)
+fig
 
 md"""
 Finally, we can obtain a value for the Haldane gap by extrapolating our results for different system sizes.
@@ -85,9 +88,12 @@ f = fit(Ls .^ (-2), ΔEs, 1)
 
 #+
 
-p_size_extrapolation = plot(; xaxis = "L^(-2)", yaxis = "ΔE", xlims = (0, 0.015))
-plot!(p_size_extrapolation, Ls .^ (-2), ΔEs; seriestype = :scatter, label = "numerical")
-plot!(p_size_extrapolation, x -> f(x); label = "fit")
+fig = Figure()
+ax = Axis(fig[1, 1]; xlabel = "L^(-2)", ylabel = "ΔE", limits = ((0, 0.015), nothing))
+scatter!(ax, Ls .^ (-2), ΔEs; label = "numerical")
+lines!(ax, range(0, 0.015, 100), x -> f(x); label = "fit")
+axislegend(ax; position = :lt)
+fig
 
 md"""
 ## Thermodynamic limit
@@ -114,4 +120,4 @@ println("minimum @k = $(kspace[idx]):\t ΔE = $(ΔE)")
 
 #+
 
-plot(kspace, real.(Es); xaxis = "momentum", yaxis = "ΔE", label = "S = 1")
+series(kspace, permutedims(real.(Es)); axis = (; xlabel = "momentum", ylabel = "ΔE", title = "S = 1"))
