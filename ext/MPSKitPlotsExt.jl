@@ -30,6 +30,11 @@ import MPSKit: entanglementplot, transferplot
         push!(sectors, c)
     end
 
+    if any(v -> any(<=(0), v), spectrum)
+        @warn "Entanglement spectrum contains vanishing Schmidt values. These are omitted from the plot."
+        spectrum = [filter(>(0), v) for v in spectrum]
+    end
+
     if length(spectrum) > 1
         order = sortperm(spectrum; by = sortby, rev = true)
         spectrum = spectrum[order]

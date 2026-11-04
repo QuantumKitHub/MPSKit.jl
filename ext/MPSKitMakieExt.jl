@@ -23,19 +23,20 @@ function entanglement_data(mps, site, expand_symmetry, sortby, margin)
         b = collect(Float64, spectra[c])
         return expand_symmetry ? sort!(repeat(b, dim(c)); rev = true) : b
     end
+    dropped = any(<=(0), Iterators.flatten(spectrum))
     order = sortperm(spectrum; by = sortby, rev = true)
     spectrum, sectors = spectrum[order], sectors[order]
     points = map(enumerate(spectrum)) do (i, values)
         n = length(values)
         xs = n == 1 ? [i + 0.5] : range(i + float(margin), i + 1 - float(margin); length = n)
-        # zero Schmidt values cannot be shown on a logarithmic axis
         return [Point2d(x, y) for (x, y) in zip(xs, values) if y > 0]
     end
-    return (; sectors, points)
+    return (; sectors, points, dropped)
 end
 
 function Makie.plot!(p::Entanglement_Plot)
     data = lift(entanglement_data, p, p.mps, p.site, p.expand_symmetry, p.sortby, p.sector_margin)
+    data[].dropped && @warn "Entanglement spectrum contains vanishing Schmidt values. These are omitted from the plot."
     add_sector_scatters!(p, data)
     return p
 end
