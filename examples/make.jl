@@ -144,12 +144,12 @@ function strip_precompilation_output(content::AbstractString)
     return join(kept, '\n')
 end
 
-# All examples run in this one process, and Plots keeps `theme`/`default` settings as global
-# state, so an example that styles its plots would otherwise restyle every later example.
-const PLOTS_PKGID = Base.PkgId(Base.UUID("91a5bcdd-55d7-5caf-9e0b-520d859cae80"), "Plots")
+# All examples run in this one process, and Makie keeps the theme as global state,
+# so an example that styles its plots would otherwise restyle every later example.
+const MAKIE_PKGID = Base.PkgId(Base.UUID("ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"), "Makie")
 function reset_plot_defaults()
-    plots = get(Base.loaded_modules, PLOTS_PKGID, nothing)
-    isnothing(plots) || Base.invokelatest(plots.reset_defaults)
+    makie = get(Base.loaded_modules, MAKIE_PKGID, nothing)
+    isnothing(makie) || Base.invokelatest(makie.set_theme!)
     return nothing
 end
 

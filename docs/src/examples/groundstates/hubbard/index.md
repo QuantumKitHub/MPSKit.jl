@@ -40,7 +40,7 @@ using MPSKit
 using .ExampleModels
 using SpecialFunctions: besselj0, besselj1
 using QuadGK: quadgk
-using Plots
+using CairoMakie
 using Interpolations
 using Optim
 ````
@@ -121,7 +121,7 @@ Groundstate energy:
 
 ````
 ┌ Info: Groundstate energy:
-│     * numerical: -2.1899960609745746
+│     * numerical: -2.189996060974573
 └     * analytic: -2.190038374277775
 
 ````
@@ -156,7 +156,7 @@ Groundstate energy:
 
 ````
 ┌ Info: Groundstate energy:
-│     * numerical: -2.1900153475144615
+│     * numerical: -2.1900153475144597
 └     * analytic: -2.190038374277775
 
 ````
@@ -230,14 +230,19 @@ I_holon = sortperm(P_holon_analytic)
 P_holon_analytic = P_holon_analytic[I_holon]
 E_holon_analytic = E_holon_analytic[I_holon];
 
-p = let p_excitations = plot(; xaxis = "momentum", yaxis = "energy")
-    scatter!(p_excitations, momenta, real(E_spinon); label = "spinon")
-    plot!(p_excitations, P_spinon_analytic, E_spinon_analytic; label = "spinon (analytic)")
+# one point per momentum and excitation branch
+branches(momenta, E) = (repeat(momenta, size(E, 2)), vec(real(E)))
 
-    scatter!(p_excitations, momenta, real(E_holon); label = "holon")
-    plot!(p_excitations, P_holon_analytic, E_holon_analytic; label = "holon (analytic)")
+let fig = Figure()
+    ax = Axis(fig[1, 1]; xlabel = "momentum", ylabel = "energy")
+    scatter!(ax, branches(momenta, E_spinon)...; label = "spinon")
+    lines!(ax, P_spinon_analytic, E_spinon_analytic; label = "spinon (analytic)")
 
-    p_excitations
+    scatter!(ax, branches(momenta, E_holon)...; label = "holon")
+    lines!(ax, P_holon_analytic, E_holon_analytic; label = "holon (analytic)")
+
+    Legend(fig[1, 2], ax)
+    fig
 end
 ````
 
@@ -250,14 +255,16 @@ Here, we can fix this shift by realizing that our choice of shifting the grounds
 
 ````julia
 momenta_shifted = rem2pi.(momenta .- π / 2, RoundNearest)
-p = let p_excitations = plot(; xaxis = "momentum", yaxis = "energy", xlims = (-π, π))
-    scatter!(p_excitations, momenta_shifted, real(E_spinon); label = "spinon")
-    plot!(p_excitations, P_spinon_analytic, E_spinon_analytic; label = "spinon (analytic)")
+let fig = Figure()
+    ax = Axis(fig[1, 1]; xlabel = "momentum", ylabel = "energy", limits = ((-π, π), nothing))
+    scatter!(ax, branches(momenta_shifted, E_spinon)...; label = "spinon")
+    lines!(ax, P_spinon_analytic, E_spinon_analytic; label = "spinon (analytic)")
 
-    scatter!(p_excitations, momenta_shifted, real(E_holon); label = "holon")
-    plot!(p_excitations, P_holon_analytic, E_holon_analytic; label = "holon (analytic)")
+    scatter!(ax, branches(momenta_shifted, E_holon)...; label = "holon")
+    lines!(ax, P_holon_analytic, E_holon_analytic; label = "holon (analytic)")
 
-    p_excitations
+    Legend(fig[1, 2], ax)
+    fig
 end
 ````
 
@@ -308,22 +315,22 @@ E_scattering_max = map(momenta_shifted) do p
     return e
 end;
 
-p = let p_excitations = plot(;
-        xaxis = "momentum", yaxis = "energy", xlims = (-π, π), ylims = (-0.1, 5)
-    )
-    scatter!(p_excitations, momenta_shifted, real(E_spinon); label = "spinon")
-    plot!(p_excitations, P_spinon_analytic, E_spinon_analytic; label = "spinon (analytic)")
+let fig = Figure()
+    ax = Axis(fig[1, 1]; xlabel = "momentum", ylabel = "energy", limits = ((-π, π), (-0.1, 5)))
+    scatter!(ax, branches(momenta_shifted, E_spinon)...; label = "spinon")
+    lines!(ax, P_spinon_analytic, E_spinon_analytic; label = "spinon (analytic)")
 
-    scatter!(p_excitations, momenta_shifted, real(E_holon); label = "holon")
-    plot!(p_excitations, P_holon_analytic, E_holon_analytic; label = "holon (analytic)")
+    scatter!(ax, branches(momenta_shifted, E_holon)...; label = "holon")
+    lines!(ax, P_holon_analytic, E_holon_analytic; label = "holon (analytic)")
 
     I = sortperm(momenta_shifted)
-    plot!(
-        p_excitations, momenta_shifted[I], E_scattering_min[I]; label = "scattering states",
-        fillrange = E_scattering_max[I], fillalpha = 0.3, fillstyle = :x
+    band!(
+        ax, momenta_shifted[I], E_scattering_min[I], E_scattering_max[I];
+        label = "scattering states", color = (:gray, 0.3)
     )
 
-    p_excitations
+    Legend(fig[1, 2], ax)
+    fig
 end
 ````
 

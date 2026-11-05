@@ -129,6 +129,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   `expectation_value(::InfiniteMPS, ::InfiniteMPO)` forwards here. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 - `InfiniteMultilineMPS`/`FiniteMultilineMPS` and `InfiniteMultilineMPO`/`FiniteMultilineMPO`
   aliases for multiline objects with infinite or finite lines. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
+- Makie.jl plotting functions `entanglement_plot` and `transfer_plot`, and their mutating
+  counterparts `entanglement_plot!` and `transfer_plot!`, through a new `MPSKitMakieExt` package
+  extension that is loaded with any Makie backend (e.g. `using CairoMakie`). ([#428](https://github.com/QuantumKitHub/MPSKit.jl/pull/428))
 
 ### Changed
 
@@ -200,6 +203,10 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Deprecated
 
 - `DynamicTols.updatetol(alg, iter, ϵ)`; use `DynamicTols.adapt_solver(alg; iter, g_global = ϵ)` instead. ([#455](https://github.com/QuantumKitHub/MPSKit.jl/pull/455))
+- The Plots.jl recipes `entanglementplot` and `transferplot`, in favor of the Makie.jl based
+  `entanglement_plot` and `transfer_plot`. RecipesBase is now a weak dependency, so these are
+  only available once Plots.jl is loaded. ([#428](https://github.com/QuantumKitHub/MPSKit.jl/pull/428))
+
 ### Removed
 
 - The custom `MPSTensor` constructors; construct `TensorMap`s with explicit `TensorMapSpace`s instead. ([#475](https://github.com/QuantumKitHub/MPSKit.jl/pull/475))
@@ -232,6 +239,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
   matching tensors of a line, and accepts any row due to periodicity.
   `checkbounds(Bool, ::PeriodicArray, I...)` now also accepts any index, matching `getindex`. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
 - `size`/`axes` for a `CView` over a `Multiline` with finite lines were missing. ([#508](https://github.com/QuantumKitHub/MPSKit.jl/pull/508))
+- `transferplot` shifted the angles the wrong way for a nonzero `thetaorigin`, moving eigenvalues
+  outside the plotted range. ([#428](https://github.com/QuantumKitHub/MPSKit.jl/pull/428))
 - `excitations(::InfiniteMPO, ::QuasiparticleAnsatz, ::InfiniteQP, lenvs, renvs)` referenced `H_eff`  before assigning. ([#489](https://github.com/QuantumKitHub/MPSKit.jl/pull/489))
 - `Base.:+`/`-` on `FiniteMPS` returned a wrong state for near-parallel operands carried by
   different tensor networks, e.g. `norm(E₀ * gs - H * gs)` coming out as `2 * norm(gs) * E₀`

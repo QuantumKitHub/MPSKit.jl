@@ -7,7 +7,7 @@ using .ExampleModels
 using MPSKit: infinite_temperature_density_matrix
 using QuadGK: quadgk
 using SpecialFunctions: ellipe
-using Plots
+using CairoMakie
 using LinearAlgebra
 using BenchmarkFreeFermions
 
@@ -180,23 +180,39 @@ Z_taylor = map(Iterators.product(βs, expansion_orders)) do (β, expansion_order
 end
 F_taylor = -(1 ./ βs) .* Z_taylor
 
-p_taylor = let
-    labels = reshape(
-        map(expansion_orders) do N
-            return "Taylor N=$N"
-        end, 1, :
-    )
-    p1 = plot(
-        βs, Z_analytic; label = "analytic", title = "Partition function",
-        xlabel = "β", ylabel = "Z(β)"
-    )
-    plot!(p1, βs, Z_taylor; label = labels)
-    p2 = plot(
-        βs, F_analytic; label = "analytic", title = "Free energy",
-        xlabel = "β", ylabel = "F(β)"
-    )
-    plot!(p2, βs, F_taylor; label = labels)
-    plot(p1, p2)
+## Makie skips NaN, but picks wrong limits for infinite or (on a log scale) zero values
+nan_unless(f, ys) = [f(y) ? y : NaN for y in ys]
+
+## Plot the errors of several methods side by side, given as `label => (βs, ΔZ, ΔF)`.
+function plot_errors(errors; position = :lt, yscale = identity)
+    fig = Figure(; size = (800, 400))
+    axZ = Axis(fig[1, 1]; title = "Partition function error", xlabel = "β", ylabel = "ΔZ(β)", yscale)
+    axF = Axis(fig[1, 2]; title = "Free energy error", xlabel = "β", ylabel = "ΔF(β)", yscale)
+    valid = yscale === identity ? isfinite : y -> isfinite(y) && y > 0
+    for (label, (β, ΔZ, ΔF)) in errors
+        lines!(axZ, β, nan_unless(valid, ΔZ); label)
+        lines!(axF, β, nan_unless(valid, ΔF); label)
+    end
+    axislegend(axZ; position)
+    return fig
+end
+
+taylor_errors(Z, F, orders) = [
+    "Taylor N=$N" => (βs, abs.(Z[:, i] .- Z_analytic), abs.(F[:, i] .- F_analytic))
+        for (i, N) in enumerate(orders)
+]
+
+p_taylor = let fig = Figure(; size = (800, 400))
+    axZ = Axis(fig[1, 1]; title = "Partition function", xlabel = "β", ylabel = "Z(β)")
+    axF = Axis(fig[1, 2]; title = "Free energy", xlabel = "β", ylabel = "F(β)")
+    lines!(axZ, βs, Z_analytic; label = "analytic")
+    lines!(axF, βs, nan_unless(isfinite, F_analytic); label = "analytic")
+    for (i, N) in enumerate(expansion_orders)
+        lines!(axZ, βs, Z_taylor[:, i]; label = "Taylor N=$N")
+        lines!(axF, βs, nan_unless(isfinite, F_taylor[:, i]); label = "Taylor N=$N")
+    end
+    axislegend(axZ; position = :lt)
+    fig
 end
 
 md"""
@@ -234,23 +250,7 @@ expansion_orders = 2:3
 Z_taylor = Z_taylor[:, 2:end]
 F_taylor = F_taylor[:, 2:end]
 
-p_taylor_diff = let
-    labels = reshape(
-        map(expansion_orders) do N
-            return "Taylor N=$N"
-        end, 1, :
-    )
-    p1 = plot(
-        βs, abs.(Z_taylor .- Z_analytic);
-        label = labels, title = "Partition function error",
-        xlabel = "β", ylabel = "ΔZ(β)", legend = :topleft
-    )
-    p2 = plot(
-        βs, abs.(F_taylor .- F_analytic); label = labels,
-        xlabel = "β", ylabel = "ΔF(β)", title = "Free energy error", legend = :topleft
-    )
-    plot(p1, p2)
-end
+p_taylor_diff = plot_errors(taylor_errors(Z_taylor, F_taylor, expansion_orders))
 
 md"""
 We can now clearly see that, somewhat unsurprisingly, the error increases the larger $β$ becomes.
@@ -284,23 +284,7 @@ Z_taylor2 = map(Iterators.product(βs, expansion_orders)) do (β, expansion_orde
 end
 F_taylor2 = -(1 ./ βs) .* Z_taylor2
 
-p_taylor2_diff = let
-    labels = reshape(
-        map(expansion_orders[2:end]) do N
-            return "Taylor N=$N"
-        end, 1, :
-    )
-    p1 = plot(
-        βs, abs.(Z_taylor2 .- Z_analytic);
-        label = labels, title = "Partition function error",
-        xlabel = "β", ylabel = "ΔZ(β)", legend = :topleft
-    )
-    p2 = plot(
-        βs, abs.(F_taylor2 .- F_analytic); label = labels,
-        xlabel = "β", ylabel = "ΔF(β)", title = "Free energy error", legend = :topleft
-    )
-    plot(p1, p2)
-end
+p_taylor2_diff = plot_errors(taylor_errors(Z_taylor2, F_taylor2, expansion_orders))
 
 md"""
 ### MPO multiplication approach (linear)
@@ -350,32 +334,12 @@ for i in 3:length(βs)
 end
 F_mpo_mul = -(1 ./ βs) .* Z_mpo_mul
 
-p_mpo_mul_diff = let
-    labels = reshape(
-        map(expansion_orders) do N
-            return "Taylor N=$N"
-        end, 1, :
-    )
-    p1 = plot(
-        βs, abs.(Z_taylor2 .- Z_analytic);
-        label = labels, title = "Partition function error",
-        xlabel = "β", ylabel = "ΔZ(β)", legend = :bottomright, yscale = :log10
-    )
-    plot!(
-        p1, βs, abs.(Z_mpo_mul .- Z_analytic);
-        label = "MPO multiplication"
-    )
-    p2 = plot(
-        βs, abs.(F_taylor2 .- F_analytic); label = labels,
-        xlabel = "β", ylabel = "ΔF(β)", title = "Free energy error", legend = nothing,
-        yscale = :log10
-    )
-    plot!(
-        p2, βs, abs.(F_mpo_mul .- F_analytic);
-        label = "MPO multiplication"
-    )
-    plot(p1, p2)
-end
+p_mpo_mul_diff = plot_errors(
+    [
+        taylor_errors(Z_taylor2, F_taylor2, expansion_orders);
+        "MPO multiplication" => (βs, abs.(Z_mpo_mul .- Z_analytic), abs.(F_mpo_mul .- F_analytic))
+    ]; position = :rb, yscale = log10
+)
 
 md"""
 This approach clearly improves the accuracy of the results, indicating that we can indeed compute partition functions at larger $β$ values.
@@ -434,28 +398,13 @@ for i in 2:length(βs_exp)
 end
 F_mpo_mul_exp = -(1 ./ βs_exp) .* Z_mpo_mul_exp
 
-p_mpo_mul_exp_diff = let
-    labels = reshape(
-        map(expansion_orders[2:end]) do N
-            return "Taylor N=$N"
-        end, 1, :
-    )
-    p1 = plot(
-        βs, abs.(Z_taylor2 .- Z_analytic);
-        label = labels, title = "Partition function error", xlabel = "β", ylabel = "ΔZ(β)",
-        legend = :bottomright, yscale = :log10
-    )
-    plot!(p1, βs, abs.(Z_mpo_mul .- Z_analytic); label = "MPO multiplication")
-    plot!(p1, βs_exp, abs.(Z_mpo_mul_exp .- Z_analytic_exp); label = "MPO multiplication exp")
-
-    p2 = plot(
-        βs, abs.(F_taylor2 .- F_analytic); label = labels, xlabel = "β", ylabel = "ΔF(β)",
-        title = "Free energy error", legend = nothing, yscale = :log10
-    )
-    plot!(p2, βs, abs.(F_mpo_mul .- F_analytic); label = "MPO multiplication")
-    plot!(p2, βs_exp, abs.(F_mpo_mul_exp .- F_analytic_exp); label = "MPO multiplication exp")
-    plot(p1, p2)
-end
+p_mpo_mul_exp_diff = plot_errors(
+    [
+        taylor_errors(Z_taylor2, F_taylor2, expansion_orders);
+        "MPO multiplication" => (βs, abs.(Z_mpo_mul .- Z_analytic), abs.(F_mpo_mul .- F_analytic))
+        "MPO multiplication exp" => (βs_exp, abs.(Z_mpo_mul_exp .- Z_analytic_exp), abs.(F_mpo_mul_exp .- F_analytic_exp))
+    ]; position = :rb, yscale = log10
+)
 
 md"""
 Clearly, the exponential approach allows us to reach larger $β$ values much quicker, but there is again a trade-off.
@@ -501,31 +450,14 @@ for i in 2:length(βs)
 end
 F_tdvp = -(1 ./ βs) .* Z_tdvp
 
-p_mpo_mul_diff = let
-    labels = reshape(
-        map(expansion_orders) do N
-            return "Taylor N=$N"
-        end, 1, :
-    )
-    p1 = plot(
-        βs, abs.(Z_taylor2 .- Z_analytic); label = labels,
-        title = "Partition function error", xlabel = "β", ylabel = "ΔZ(β)",
-        legend = :bottomright, yscale = :log10
-    )
-    plot!(p1, βs, abs.(Z_mpo_mul .- Z_analytic); label = "MPO multiplication")
-    plot!(p1, βs_exp, abs.(Z_mpo_mul_exp .- Z_analytic_exp); label = "MPO multiplication exp")
-    plot!(p1, βs, abs.(Z_tdvp .- Z_analytic); label = "TDVP")
-
-    p2 = plot(
-        βs, abs.(F_taylor2 .- F_analytic); label = labels, xlabel = "β", ylabel = "ΔF(β)",
-        title = "Free energy error", legend = nothing, yscale = :log10
-    )
-    plot!(p2, βs, abs.(F_mpo_mul .- F_analytic); label = "MPO multiplication")
-    plot!(p2, βs_exp, abs.(F_mpo_mul_exp .- F_analytic_exp); label = "MPO multiplication exp")
-    plot!(p2, βs, abs.(F_tdvp .- F_analytic); label = "TDVP")
-
-    plot(p1, p2)
-end
+p_mpo_mul_diff = plot_errors(
+    [
+        taylor_errors(Z_taylor2, F_taylor2, expansion_orders);
+        "MPO multiplication" => (βs, abs.(Z_mpo_mul .- Z_analytic), abs.(F_mpo_mul .- F_analytic))
+        "MPO multiplication exp" => (βs_exp, abs.(Z_mpo_mul_exp .- Z_analytic_exp), abs.(F_mpo_mul_exp .- F_analytic_exp))
+        "TDVP" => (βs, abs.(Z_tdvp .- Z_analytic), abs.(F_tdvp .- F_analytic))
+    ]; position = :rb, yscale = log10
+)
 
 md"""
 !!! note

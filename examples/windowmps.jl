@@ -1,4 +1,4 @@
-using MPSKit, TensorKit, Plots
+using MPSKit, TensorKit, CairoMakie
 include(joinpath(@__DIR__, "..", "docs", "src", "assets", "models.jl"))
 using .ExampleModels
 

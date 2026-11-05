@@ -23,7 +23,7 @@ Consequently, the Hamiltonian also commutes with all elements of $SU(2)$.
 
 using TensorKit
 using MPSKit
-using Plots
+using CairoMakie
 
 casimir(s::SU2Irrep) = s.j * (s.j + 1)
 
@@ -69,7 +69,9 @@ V_wrong = SU2Space(0 => 8, 1 // 2 => 8, 1 => 3, 3 // 2 => 3)
 ψ = InfiniteMPS(ℋ, V_wrong)
 ψ, environments, info = find_groundstate(ψ, H, VUMPS(; maxiter = 10))
 sectors = SU2Irrep[0, 1 // 2, 1, 3 // 2]
-transferplot(ψ; sectors, title = "Transfer matrix spectrum", legend = :outertop)
+fig, ax, _ = transfer_plot(ψ; sectors, axis = (; title = "Transfer matrix spectrum"))
+Legend(fig[1, 2], ax)
+fig
 
 md"""
 Nevertheless, using the symmetry, this can be remedied rather easily, by imposing the ground state to belong to a single class, and comparing the results.
@@ -97,21 +99,18 @@ E_minus = expectation_value(ψ_minus, H)
 
 #+
 
-transferp_plus = transferplot(
-    ψ_plus;
-    sectors = SU2Irrep[0, 1, 2], title = "ψ_plus", legend = :outertop
-)
-transferp_minus = transferplot(
-    ψ_minus;
-    sectors = SU2Irrep[0, 1, 2], title = "ψ_minus", legend = :outertop
-)
-plot(transferp_plus, transferp_minus; layout = (1, 2), size = (800, 400))
+fig = Figure(; size = (800, 400))
+ax, _ = transfer_plot(fig[1, 1], ψ_plus; sectors = SU2Irrep[0, 1, 2], axis = (; title = "ψ_plus"))
+transfer_plot(fig[1, 2], ψ_minus; sectors = SU2Irrep[0, 1, 2], axis = (; title = "ψ_minus"))
+Legend(fig[2, 1:2], ax; orientation = :horizontal)
+fig
 
 #+
 
-entanglementp_plus = entanglementplot(ψ_plus; title = "ψ_plus", legend = :outertop)
-entanglementp_minus = entanglementplot(ψ_minus; title = "ψ_minus", legend = :outertop)
-plot(entanglementp_plus, entanglementp_minus; layout = (1, 2), size = (800, 400))
+fig = Figure(; size = (800, 400))
+entanglement_plot(fig[1, 1], ψ_plus; axis = (; title = "ψ_plus"))
+entanglement_plot(fig[1, 2], ψ_minus; axis = (; title = "ψ_minus"))
+fig
 
 md"""
 

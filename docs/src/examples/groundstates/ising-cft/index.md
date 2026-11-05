@@ -12,7 +12,7 @@ This tutorial is meant to show the finite size CFT spectrum for the quantum Isin
 We do this by first employing an exact diagonalization technique, and then extending the analysis to larger system sizes through the use of MPS techniques.
 
 ````julia
-using MPSKit, TensorKit, Plots, KrylovKit
+using MPSKit, TensorKit, CairoMakie, KrylovKit
 using .ExampleModels
 using LinearAlgebra: eigvals, diagm, Hermitian
 ````
@@ -51,10 +51,7 @@ Thus, optimizing the middle tensor is equivalent to optimizing a state in the en
 
 ````julia
 energies, states = exact_diagonalization(H; num = 18, alg = Lanczos(; krylovdim = 200));
-plot(
-    real.(energies);
-    seriestype = :scatter, legend = false, ylabel = "energy", xlabel = "#eigenvalue"
-)
+scatter(real.(energies); axis = (; xlabel = "#eigenvalue", ylabel = "energy"))
 ````
 
 ![](figure-1.png)
@@ -119,24 +116,24 @@ append!(momenta, fix_degeneracies(states[17:18]))
 
 ````
 18-element Vector{Float64}:
- -2.1278136533158578e-17
-  2.3050344087760185e-17
- -5.0324217423779645e-17
-  0.5235987755982991
- -0.5235987755982991
- -1.0471975511965976
-  1.0471975511965974
- -0.523598775598299
+  1.4801423271942085e-18
+ -5.394357855450486e-18
+ -6.467597289392403e-18
   0.5235987755982988
-  1.0471975511965979
- -1.0471975511965976
- -1.9939344511686805e-17
- -1.5707963267948966
-  1.5707963267948961
+ -0.523598775598299
+  1.0471975511965983
+ -1.047197551196597
+ -0.5235987755982986
+  0.523598775598299
  -1.047197551196598
-  1.047197551196598
- -1.5707963267948968
-  1.5707963267948966
+  1.0471975511965974
+  1.413981352586968e-18
+ -1.570796326794897
+  1.5707963267948963
+ -1.047197551196598
+  1.0471975511965976
+  1.5707963267948968
+ -1.5707963267948966
 ````
 
 We can compute the scaling dimensions $Δ_n$ of the operators in the CFT from the energy gap of the corresponding excitations as $E_n - E_0 = \frac{2π v}{L} Δ_n$, where $v = 2$.
@@ -147,14 +144,12 @@ v = 2.0
 Δ = real.(energies[1:18] .- energies[1]) ./ (2π * v / L)
 S = momenta ./ (2π / L)
 
-p = plot(
-    S, real.(Δ);
-    seriestype = :scatter, xlabel = "conformal spin (S)", ylabel = "scaling dimension (Δ)",
-    legend = false
+fig, ax, _ = scatter(
+    S, real.(Δ); axis = (; xlabel = "conformal spin (S)", ylabel = "scaling dimension (Δ)")
 )
-vline!(p, -3:3; color = "gray", linestyle = :dash)
-hline!(p, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color = "gray", linestyle = :dash)
-p
+vlines!(ax, -3:3; color = :gray, linestyle = :dash)
+hlines!(ax, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color = :gray, linestyle = :dash)
+fig
 ````
 
 ![](figure-2.png)
@@ -193,14 +188,12 @@ v = 2.0
 Δ_mps = real.(energies_mps[1:18] .- energies_mps[1]) ./ (2π * v / L_mps)
 S_mps = momenta_mps ./ (2π / L_mps)
 
-p_mps = plot(
-    S_mps, real.(Δ_mps);
-    seriestype = :scatter, xlabel = "conformal spin (S)",
-    ylabel = "scaling dimension (Δ)", legend = false
+fig, ax, _ = scatter(
+    S_mps, real.(Δ_mps); axis = (; xlabel = "conformal spin (S)", ylabel = "scaling dimension (Δ)")
 )
-vline!(p_mps, -3:3; color = "gray", linestyle = :dash)
-hline!(p_mps, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color = "gray", linestyle = :dash)
-p_mps
+vlines!(ax, -3:3; color = :gray, linestyle = :dash)
+hlines!(ax, [0, 1 / 8, 1, 9 / 8, 2, 17 / 8]; color = :gray, linestyle = :dash)
+fig
 ````
 
 ![](figure-3.png)

@@ -10,7 +10,7 @@ Because TensorKit supports anyonic symmetries, so does MPSKit.
 To follow the tutorial you need the following packages.
 """
 
-using MPSKit, TensorKit, Plots, Polynomials
+using MPSKit, TensorKit, CairoMakie, Polynomials
 include(joinpath(@__DIR__, "..", "..", "..", "docs", "src", "assets", "models.jl")) #hide
 using .ExampleModels
 
@@ -99,6 +99,10 @@ c = f.coeffs[2]
 
 #+
 
-p = plot(; xlabel = "logarithmic correlation length", ylabel = "entanglement entropy")
-p = plot(log.(ξs), Ss; seriestype = :scatter, label = nothing)
-plot!(p, ξ -> f(ξ) / 6; label = "fit")
+fig, ax, _ = scatter(
+    log.(ξs), Ss;
+    axis = (; xlabel = "logarithmic correlation length", ylabel = "entanglement entropy")
+)
+lines!(ax, range(extrema(log.(ξs))..., 100), ξ -> f(ξ) / 6; label = "fit")
+axislegend(ax; position = :lt)
+fig

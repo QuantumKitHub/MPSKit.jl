@@ -17,7 +17,7 @@ Because TensorKit supports anyonic symmetries, so does MPSKit.
 To follow the tutorial you need the following packages.
 
 ````julia
-using MPSKit, TensorKit, Plots, Polynomials
+using MPSKit, TensorKit, CairoMakie, Polynomials
 using .ExampleModels
 ````
 
@@ -60,7 +60,7 @@ println("F = $F\tS = $S\tξ = $ξ")
 ````
 
 ````
-F = 0.12340715308061596	S = 1.2807829607025263	ξ = 13.849682470052896
+F = 0.12340715308061621	S = 1.2807829607025245	ξ = 13.849682470052645
 
 ````
 
@@ -107,13 +107,17 @@ c = f.coeffs[2]
 ````
 
 ````
-0.8025235781819059
+0.8025235781819732
 ````
 
 ````julia
-p = plot(; xlabel = "logarithmic correlation length", ylabel = "entanglement entropy")
-p = plot(log.(ξs), Ss; seriestype = :scatter, label = nothing)
-plot!(p, ξ -> f(ξ) / 6; label = "fit")
+fig, ax, _ = scatter(
+    log.(ξs), Ss;
+    axis = (; xlabel = "logarithmic correlation length", ylabel = "entanglement entropy")
+)
+lines!(ax, range(extrema(log.(ξs))..., 100), ξ -> f(ξ) / 6; label = "fit")
+axislegend(ax; position = :lt)
+fig
 ````
 
 ![](figure-1.png)

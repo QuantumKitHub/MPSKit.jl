@@ -17,7 +17,7 @@ using Base64
 # A `@raw html` fenced block whose body is a single `<img ...>` tag.
 const _RAW_IMG_BLOCK = r"```@raw html[ \t]*\r?\n[ \t]*(<img[^>]*>)[ \t]*\r?\n```"
 # A base64 image data URI inside such a tag: capture the MIME subtype and the payload.
-const _DATA_URI = r"data:image/([A-Za-z0-9.+-]+);base64,([A-Za-z0-9+/=]+)"
+const _DATA_URI = r"data:image/([A-Za-z0-9.+-]+);base64,\s*([A-Za-z0-9+/=]+)"
 
 _ext_for(fmt) = fmt == "svg+xml" ? "svg" : fmt
 
