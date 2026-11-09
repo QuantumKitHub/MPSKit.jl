@@ -25,8 +25,8 @@ The sidebar lists the same pages in the same order.
 
 ![](groundstates/tfim-groundstate/figure-1.png)
 
-Scans the transverse field across the critical point of the Ising chain and locates the transition three independent ways: the order parameter on a finite chain and directly in the thermodynamic limit, the entanglement entropy, and the correlation length.
-Combines the basic finite and infinite ground-state tools into one case study, without any symmetries.
+Scans the transverse field across the critical point of the Ising chain, comparing finite chains of increasing length with the thermodynamic limit through the order parameter, the entanglement entropy and the correlation length, and extracts the central charge from the entanglement entropy at the critical point.
+Combines the basic finite and infinite ground-state tools into one case study, using only a ℤ₂ symmetry.
 **Complexity: introductory.**
 
 ### [The Ising CFT spectrum](groundstates/ising-cft/index.md)

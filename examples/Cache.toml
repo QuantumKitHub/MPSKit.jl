@@ -10,7 +10,7 @@ ising-dqpt = "bd3313835872764e28f77750433ed72b8097ee74a295afa9947a151bc80be6ef"
 xy-finiteT = "2263b2b3fd3ddaaf8164b2d4866088028ca535f925f37d13a77e4c4965099d97"
 
 [groundstates]
-tfim-groundstate = "c68c90200aa2a11df7a5a13ff996cae42837e88fc10c7d126fa9d6971c4fac24"
+tfim-groundstate = "5f627fd2a312a6a2701272a131bd856b977e68d376e1eeaf53bc8e72d779b71d"
 bose-hubbard = "d2c28ca050a2f0a7d039ae145052b1fbfbcd2114bfd2f33bd4067526918dedc0"
 haldane-spt = "ecafb4eb37da88444ef8ffad7c5d237eb8f6ff7c99eef6b6ce01dc2169798c33"
 xxz-heisenberg = "ceab3a8607ad3ad28d536309997f8db1fbf4b732ecea119ccfb314b9799f7f80"
