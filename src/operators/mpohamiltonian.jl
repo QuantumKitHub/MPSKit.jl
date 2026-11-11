@@ -505,14 +505,15 @@ end
     _instantiate_operators(lattice, local_operators)
 
 Instantiate all `local_operators` on `lattice`, decomposing every distinct operator into an MPO
-only once. Operators that are proportional to one another share a single decomposition, with
-the scalar factor absorbed into the final tensor. Terms that differ only in their prefactor
-thus end up with literally the same operators, and can share their virtual channels in
-[`_assign_channels!`](@ref) -- which the decomposition itself does not guarantee, as the SVDs
-of two proportional operators need not be related by that same scalar.
+only once. Operators of the same type that are proportional to one another share a single
+decomposition, with the scalar factor absorbed into the final tensor. Terms that differ only in
+their prefactor thus end up with literally the same operators, and can share their virtual
+channels in [`_assign_channels!`](@ref) -- which the decomposition itself does not guarantee,
+as the SVDs of two proportional operators need not be related by that same scalar.
 """
 function _instantiate_operators(lattice, local_operators)
-    representatives = Tuple{Any, Any, Any}[]
+    # the representatives of each operator type are kept in a concretely typed vector
+    representatives = IdDict{Type, Vector}()
     # A comprehension rather than `map`: all of the work happens in here, and type inference
     # limits `map` calls that are nested within another `map` (JuliaLang/julia#64862).
     return [
@@ -528,16 +529,19 @@ function _decompose_once!(representatives, term::Pair)
     inds, O = term
     return inds => _decompose_once!(representatives, O)
 end
-function _decompose_once!(representatives, O::AbstractTensorMap)
+function _decompose_once!(representatives::IdDict{Type, Vector}, O::AbstractTensorMap)
+    TO = typeof(O)
+    R = Tuple{TO, real(scalartype(TO)), Base.promote_op(FiniteMPO, TO)}
+    reps = get!(Vector{R}, representatives, TO)::Vector{R}
     # an operator that is handed in more than once -- the same object, as happens whenever a
     # model reuses a single operator across its terms -- is recognised without any arithmetic
-    for (O_rep, _, mpo) in representatives
+    for (O_rep, _, mpo) in reps
         O === O_rep && return mpo
     end
     # otherwise every representative costs one inner product, with its own squared norm
     # cached so that it is not recomputed for every term
     norm_squared_new = real(inner(O, O))
-    for (O_rep, norm_squared_rep, mpo) in representatives
+    for (O_rep, norm_squared_rep, mpo) in reps
         λ = _proportionality(
             O, O_rep; norm_squared_new, norm_squared_old = norm_squared_rep
         )
@@ -547,7 +551,7 @@ function _decompose_once!(representatives, O::AbstractTensorMap)
         return FiniteMPO([i == lastindex(Os) ? λ * Os[i] : Os[i] for i in eachindex(Os)])
     end
     mpo = FiniteMPO(O)
-    push!(representatives, (O, norm_squared_new, mpo))
+    push!(reps, (O, norm_squared_new, mpo))
     return mpo
 end
 
