@@ -515,9 +515,6 @@ function _instantiate_operators(lattice, local_operators)
     representatives = Tuple{Any, Any, Any}[]
     # A comprehension rather than `map`: all of the work happens in here, and type inference
     # limits `map` calls that are nested within another `map` (JuliaLang/julia#64862).
-    # `representatives` is untyped, so the calls below are hidden behind inference barriers:
-    # inferring them would only produce abstract signatures, which are costly to infer and are
-    # inferred again on every first call instead of being reused.
     return [
         Base.inferencebarrier(instantiate_operator)(
             lattice, _decompose_once!(representatives, term)
