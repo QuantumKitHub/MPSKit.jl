@@ -31,6 +31,9 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Performance
 
+- Constructing an `MPOHamiltonian` from local operators compiles about twice as fast on
+  Julia 1.13 and 1.14. ([#554](https://github.com/QuantumKitHub/MPSKit.jl/pull/554))
+
 ## [0.14.1](https://github.com/QuantumKitHub/MPSKit.jl/compare/v0.14.0...v0.14.1) - 2026-11-02
 
 ### Added
