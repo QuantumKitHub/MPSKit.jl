@@ -515,8 +515,13 @@ function _instantiate_operators(lattice, local_operators)
     representatives = Tuple{Any, Any, Any}[]
     # A comprehension rather than `map`: all of the work happens in here, and type inference
     # limits `map` calls that are nested within another `map` (JuliaLang/julia#64862).
+    # `representatives` is untyped, so the calls below are hidden behind inference barriers:
+    # inferring them would only produce abstract signatures, which are costly to infer and are
+    # inferred again on every first call instead of being reused.
     return [
-        instantiate_operator(lattice, _decompose_once!(representatives, term))
+        Base.inferencebarrier(instantiate_operator)(
+            lattice, _decompose_once!(representatives, term)
+        )
             for term in collect(local_operators)
     ]
 end
@@ -538,17 +543,21 @@ function _decompose_once!(representatives, O::AbstractTensorMap)
     # cached so that it is not recomputed for every term
     norm_squared_new = real(inner(O, O))
     for (O_rep, norm_squared_rep, mpo) in representatives
-        λ = _proportionality(
+        λ = Base.inferencebarrier(_proportionality)(
             O, O_rep; norm_squared_new, norm_squared_old = norm_squared_rep
         )
         isnothing(λ) && continue
         isone(λ) && return mpo
-        Os = parent(mpo)
-        return FiniteMPO([i == lastindex(Os) ? λ * Os[i] : Os[i] for i in eachindex(Os)])
+        return Base.inferencebarrier(_rescale_last)(mpo, λ)
     end
     mpo = FiniteMPO(O)
     push!(representatives, (O, norm_squared_new, mpo))
     return mpo
+end
+
+function _rescale_last(mpo, λ)
+    Os = parent(mpo)
+    return FiniteMPO([i == lastindex(Os) ? λ * Os[i] : Os[i] for i in eachindex(Os)])
 end
 
 """
