@@ -513,9 +513,12 @@ of two proportional operators need not be related by that same scalar.
 """
 function _instantiate_operators(lattice, local_operators)
     representatives = Tuple{Any, Any, Any}[]
-    return map(collect(local_operators)) do term
-        return instantiate_operator(lattice, _decompose_once!(representatives, term))
-    end
+    # A comprehension rather than `map`: all of the work happens in here, and type inference
+    # limits `map` calls that are nested within another `map` (JuliaLang/julia#64862).
+    return [
+        instantiate_operator(lattice, _decompose_once!(representatives, term))
+            for term in collect(local_operators)
+    ]
 end
 
 # terms that are not supplied as an `inds => operator` pair -- e.g. a `LocalOperator` -- and
