@@ -20,7 +20,7 @@ function approximate!(
     with_verbosity(; alg.verbosity) do
         @log_initialization loginit!(log, it.ϵ)
         for (_, _, ϵ) in Iterators.take(it, alg.maxiter)
-            if ϵ <= alg.tol
+            if ϵ <= alg.tol && it.iter >= alg.miniter
                 @log_convergence logfinish!(log, it.iter, ϵ)
                 break
             elseif it.iter == alg.maxiter

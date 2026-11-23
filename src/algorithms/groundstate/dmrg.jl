@@ -12,6 +12,13 @@ _build_inner_gauge(trunc, alg_svd, alg_orth) =
 _expands(alg) = false
 _expands(::DMRG3S) = true
 
+# enforce miniter ≤ maxiter
+function _check_miniter(miniter, maxiter)
+    miniter <= maxiter ||
+        throw(ArgumentError("`miniter = $miniter` exceeds `maxiter = $maxiter`"))
+    return nothing
+end
+
 """
 $(TYPEDEF)
 
@@ -66,6 +73,9 @@ struct DMRG{A, F, E, G, B} <: Algorithm
     "maximal amount of iterations"
     maxiter::Int
 
+    "minimal amount of iterations: the algorithm does not stop on convergence before this many sweeps"
+    miniter::Int
+
     "setting for how much information is displayed"
     verbosity::Int
 
@@ -87,12 +97,13 @@ struct DMRG{A, F, E, G, B} <: Algorithm
     backend::B
 end
 function DMRG(;
-        tol = Defaults.tol, maxiter = Defaults.maxiter, alg_eigsolve = (;),
+        tol = Defaults.tol, maxiter = Defaults.maxiter, miniter = 1, alg_eigsolve = (;),
         verbosity = Defaults.verbosity, finalize = Defaults._finalize,
         alg_expand = nothing, alg_gauge = nothing, trunc = nothing,
         alg_svd = Defaults.alg_svd(), alg_orth = Defaults.alg_orth(),
         backend = Defaults.backend()
     )
+    _check_miniter(miniter, maxiter)
     # single-site DMRG defaults to the per-bond adaptive controller (`AdaptiveKrylov`); pass
     # `alg_eigsolve = (; adaptive = false, ...)` to opt out (the splat overrides the default).
     alg_eigsolve′ = alg_eigsolve isa NamedTuple ?
@@ -115,7 +126,9 @@ function DMRG(;
     if (!isnothing(alg_expand) || _expands(alg_gauge)) && !_truncates(alg_gauge)
         @warn "DMRG with a bond-expanding `alg_expand` and/or `alg_gauge` but no truncation (`trunc = notrunc()`): the bond dimension will grow unboundedly each sweep."
     end
-    return DMRG(tol, maxiter, verbosity, alg_eigsolve′, finalize, alg_expand, alg_gauge, backend)
+    return DMRG(
+        tol, maxiter, miniter, verbosity, alg_eigsolve′, finalize, alg_expand, alg_gauge, backend
+    )
 end
 
 function local_update!(
@@ -198,6 +211,9 @@ struct DMRG2{A, G, F, B} <: Algorithm
     "maximal amount of iterations"
     maxiter::Int
 
+    "minimal amount of iterations: the algorithm does not stop on convergence before this many sweeps"
+    miniter::Int
+
     "setting for how much information is displayed"
     verbosity::Int
 
@@ -215,18 +231,20 @@ struct DMRG2{A, G, F, B} <: Algorithm
 end
 # TODO: find better default truncation
 function DMRG2(;
-        tol = Defaults.tol, maxiter = Defaults.maxiter, verbosity = Defaults.verbosity,
+        tol = Defaults.tol, maxiter = Defaults.maxiter, miniter = 1,
+        verbosity = Defaults.verbosity,
         alg_eigsolve = (;), alg_svd = Defaults.alg_svd(), trunc,
         finalize = Defaults._finalize,
         backend = Defaults.backend()
     )
+    _check_miniter(miniter, maxiter)
     # two-site DMRG defaults to the per-bond adaptive controller (`AdaptiveKrylov`); pass
     # `alg_eigsolve = (; adaptive = false, ...)` to opt out (the splat overrides the default).
     alg_eigsolve′ = alg_eigsolve isa NamedTuple ?
         Defaults.alg_eigsolve(; adaptive = true, alg_eigsolve...) : alg_eigsolve
     # two-site DMRG always truncates the enlarged bond back down, so the gauge is a truncated SVD
     alg_gauge = MatrixAlgebraKit.TruncatedAlgorithm(alg_svd, trunc)
-    return DMRG2(tol, maxiter, verbosity, alg_eigsolve′, alg_gauge, finalize, backend)
+    return DMRG2(tol, maxiter, miniter, verbosity, alg_eigsolve′, alg_gauge, finalize, backend)
 end
 
 function local_update!(
@@ -374,7 +392,7 @@ function find_groundstate_sweep!(
     with_verbosity(; alg.verbosity) do
         @log_initialization loginit!(log, it.ϵ, expectation_value(ψ, H, envs))
         for (ψ, envs, ϵ) in Iterators.take(it, alg.maxiter)
-            if sweep_converged(alg, it.state)
+            if sweep_converged(alg, it.state) && it.iter >= alg.miniter
                 @info TimerReport(timeroutput) _group = :mpskit_timing
                 @log_convergence logfinish!(log, it.iter, ϵ, expectation_value(ψ, H, envs))
                 break

@@ -195,6 +195,42 @@ verbosity_conv = 1
         @test E_escape < E_stuck - 1.0
         @test isapprox(E_escape, -8.6824724; atol = 1.0e-4)
     end
+
+    @testset "miniter" begin
+        H = force_planar(transverse_field_ising(; g, L))
+        ψ₀ = FiniteMPS(randn, ComplexF64, L, ℙ^2, ℙ^D)
+        ψ, envs, = find_groundstate(ψ₀, H, DMRG(; tol, verbosity = 0, maxiter = 50))
+
+        # starting from a converged state, the default stops after a single sweep
+        for alg in (DMRG(; tol, verbosity = 0), DMRG2(; tol, verbosity = 0, trunc = truncrank(D)))
+            _, _, info = find_groundstate(ψ, H, alg)
+            @test info.converged
+            @test info.numiter == 1
+        end
+
+        # miniter forces additional sweeps
+        for alg in (
+                DMRG(; tol, verbosity = 0, miniter = 3),
+                DMRG2(; tol, verbosity = 0, miniter = 3, trunc = truncrank(D)),
+            )
+            _, _, info = find_groundstate(ψ, H, alg)
+            @test info.converged
+            @test info.numiter == 3
+        end
+
+        @test_throws ArgumentError DMRG(; maxiter = 2, miniter = 3)
+        @test_throws ArgumentError DMRG2(; maxiter = 2, miniter = 3, trunc = truncrank(D))
+
+        # same for `approximate`
+        for alg in (
+                DMRG(; tol, verbosity = 0, miniter = 5),
+                DMRG2(; tol, verbosity = 0, miniter = 5, trunc = truncrank(D)),
+            )
+            _, _, info = approximate(ψ, (H, ψ), alg)
+            @test info.converged
+            @test info.numiter == 5
+        end
+    end
 end
 
 @testset "GradientGrassmann preconditioner is positive definite" begin
