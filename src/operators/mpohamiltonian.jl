@@ -516,8 +516,13 @@ function _instantiate_operators(lattice, local_operators)
     representatives = IdDict{Type, Vector}()
     # A comprehension rather than `map`: all of the work happens in here, and type inference
     # limits `map` calls that are nested within another `map` (JuliaLang/julia#64862).
+    # The barrier keeps `instantiate_operator` from being inferred inside this comprehension:
+    # without it, the first `FiniteMPOHamiltonian` of a nearest-neighbour chain spends minutes in
+    # inference on Julia 1.12, and about twice as long as with it on 1.13.
     return [
-        instantiate_operator(lattice, _decompose_once!(representatives, term))
+        Base.inferencebarrier(instantiate_operator)(
+            lattice, _decompose_once!(representatives, term)
+        )
             for term in collect(local_operators)
     ]
 end
