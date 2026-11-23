@@ -4,6 +4,7 @@ function leading_boundary(
     )
     allocator = default_allocator(ψ, SerialScheduler())
     alg isa IDMRG2 && width(ψ) < 2 && throw(ArgumentError("unit cell should be >= 2"))
+    check_miniter(alg)
     log = IterLog(alg)
     ϵ_truncs = alg isa IDMRG2 ?
         PeriodicMatrix(zeros(real(scalartype(ψ)), length(ψ), width(ψ))) : nothing
@@ -13,7 +14,7 @@ function leading_boundary(
     with_verbosity(; alg.verbosity) do
         @log_initialization loginit!(log, it.ϵ, _boundary_objective(alg, ψ, operator, envs))
         for (ψ, envs, ϵ) in Iterators.take(it, alg.maxiter)
-            if ϵ <= alg.tol
+            if ϵ <= alg.tol && it.iter >= alg.miniter
                 @log_convergence logfinish!(log, it.iter, ϵ, _boundary_objective(alg, ψ, operator, envs))
                 break
             elseif it.iter == alg.maxiter

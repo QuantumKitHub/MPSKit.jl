@@ -4,6 +4,7 @@ function approximate!(
     )
     allocator = default_allocator(ψ, SerialScheduler())
     alg isa IDMRG2 && width(ψ) < 2 && throw(ArgumentError("unit cell should be >= 2"))
+    check_miniter(alg)
     log = IterLog(alg)
     ϵ_truncs = alg isa IDMRG2 ?
         PeriodicMatrix(zeros(real(scalartype(ψ)), length(ψ), width(ψ))) : nothing
@@ -14,7 +15,7 @@ function approximate!(
         @log_initialization loginit!(log, it.ϵ)
         for _ in Iterators.take(it, alg.maxiter)
             ϵ = it.ϵ
-            if ϵ <= alg.tol
+            if ϵ <= alg.tol && it.iter >= alg.miniter
                 @log_convergence logfinish!(log, it.iter, ϵ)
                 break
             elseif it.iter == alg.maxiter

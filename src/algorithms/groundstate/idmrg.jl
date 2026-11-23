@@ -18,6 +18,9 @@ Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_bounda
     "maximal amount of iterations"
     maxiter::Int = Defaults.maxiter
 
+    "minimal amount of iterations: the algorithm does not stop on convergence before this many sweeps"
+    miniter::Int = 1
+
     "setting for how much information is displayed"
     verbosity::Int = Defaults.verbosity
 
@@ -50,6 +53,9 @@ Used as the `algorithm` argument of [`find_groundstate`](@ref), [`leading_bounda
 
     "maximal amount of iterations"
     maxiter::Int = Defaults.maxiter
+
+    "minimal amount of iterations: the algorithm does not stop on convergence before this many sweeps"
+    miniter::Int = 1
 
     "setting for how much information is displayed"
     verbosity::Int = Defaults.verbosity
@@ -98,6 +104,7 @@ end
 
 function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_type <: Union{<:IDMRG, <:IDMRG2}}
     (length(mps) ≤ 1 && alg isa IDMRG2) && throw(ArgumentError("unit cell should be >= 2"))
+    check_miniter(alg)
     name = alg isa IDMRG ? "IDMRG" : "IDMRG2"
     log = IterLog(alg)
     timeroutput = alg.verbosity > 3 ? TimerOutput(name) : NoTimerOutput()
@@ -121,7 +128,7 @@ function _find_groundstate_idmrg(mps, operator, alg::alg_type, envs) where {alg_
 
     return with_verbosity(; alg.verbosity) do
         for (mps, envs, ϵ, ΔE) in it
-            if ϵ ≤ alg.tol
+            if ϵ ≤ alg.tol && it.iter ≥ alg.miniter
                 @info TimerReport(timeroutput) _group = :mpskit_timing
                 @log_convergence logfinish!(log, it.iter, ϵ, ΔE)
                 break

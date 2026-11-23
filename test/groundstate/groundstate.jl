@@ -218,8 +218,10 @@ verbosity_conv = 1
             @test info.numiter == 3
         end
 
-        @test_throws ArgumentError DMRG(; maxiter = 2, miniter = 3)
-        @test_throws ArgumentError DMRG2(; maxiter = 2, miniter = 3, trunc = truncrank(D))
+        @test_throws ArgumentError find_groundstate(ψ, H, DMRG(; maxiter = 2, miniter = 3))
+        @test_throws ArgumentError find_groundstate(
+            ψ, H, DMRG2(; maxiter = 2, miniter = 3, trunc = truncrank(D))
+        )
 
         # same for `approximate`
         for alg in (
@@ -357,6 +359,50 @@ end
 
         @test length(info.truncation_errors) == length(ψ)
         @test maximum(info.truncation_errors) > 0
+    end
+
+    @testset "IDMRG miniter" begin
+        H = repeat(H_ref, 2)
+        ψ₀ = repeat(InfiniteMPS(ℙ^2, ℙ^D), 2)
+        ψ, = find_groundstate(ψ₀, H, IDMRG(; tol, verbosity = 0, maxiter = 200))
+        trunc = truncrank(D)
+
+        # starting from a converged state, the default stops after a single sweep
+        for alg in (IDMRG(; tol, verbosity = 0), IDMRG2(; tol, verbosity = 0, trunc))
+            _, _, info = find_groundstate(ψ, H, alg)
+            @test info.converged
+            @test info.numiter == 1
+        end
+
+        # miniter forces additional sweeps
+        for alg in (
+                IDMRG(; tol, verbosity = 0, miniter = 5),
+                IDMRG2(; tol, verbosity = 0, miniter = 5, trunc),
+            )
+            _, _, info = find_groundstate(ψ, H, alg)
+            @test info.converged
+            @test info.numiter == 5
+        end
+
+        @test_throws ArgumentError find_groundstate(ψ, H, IDMRG(; maxiter = 2, miniter = 3))
+
+        # same for `approximate`
+        W = MPSKit.DenseMPO(
+            make_time_mpo(H, 1.0e-3, TaylorCluster(; N = 3, compression = true, extension = true))
+        )
+        _, _, info = approximate(ψ, (W, ψ), IDMRG(; tol, verbosity = 0, miniter = 5))
+        @test info.converged
+        @test info.numiter == 5
+
+        # and for `leading_boundary`; restarting from a converged boundary state can take a
+        # seed-dependent number of sweeps here, so only the lower bound is deterministic
+        mpo = force_planar(classical_ising())
+        ψb, = leading_boundary(
+            InfiniteMPS([ℙ^2], [ℙ^D]), mpo, IDMRG(; tol = 1.0e-4, verbosity = 0, maxiter = 200)
+        )
+        _, _, info = leading_boundary(ψb, mpo, IDMRG(; tol = 1.0e-4, verbosity = 0, miniter = 10))
+        @test info.converged
+        @test info.numiter >= 10
     end
 
     # Regression: IDMRG2 used to error on a non-abelian (SU2) unit cell due to a space mismatch.
