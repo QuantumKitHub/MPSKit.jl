@@ -20,6 +20,13 @@ end
 
 Base.iterate(it::IterativeSolver) = iterate(it, it.state)
 
+# enforce miniter ≤ maxiter
+function check_miniter(alg)
+    alg.miniter <= alg.maxiter ||
+        throw(ArgumentError("`miniter = $(alg.miniter)` exceeds `maxiter = $(alg.maxiter)`"))
+    return nothing
+end
+
 # iteration logs are named after their algorithm unless the algorithm specifies otherwise
 IterativeLoggers.IterLog(alg::Algorithm) = IterLog(string(nameof(typeof(alg))))
 

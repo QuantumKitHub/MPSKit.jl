@@ -13,6 +13,7 @@ function approximate!(
         ψ::AbstractFiniteMPS, Oϕ, alg::Union{DMRG, DMRG2},
         envs = environments(ψ, _environment_args(Oϕ)...)
     )
+    check_miniter(alg)
     allocator = default_allocator(ψ, SerialScheduler())
     log = IterLog(alg)
     it = IterativeSolver(alg, ApproximateState(ψ, Oϕ, envs, 0, 2 * alg.tol, allocator))

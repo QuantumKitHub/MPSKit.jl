@@ -12,13 +12,6 @@ _build_inner_gauge(trunc, alg_svd, alg_orth) =
 _expands(alg) = false
 _expands(::DMRG3S) = true
 
-# enforce miniter ≤ maxiter
-function _check_miniter(miniter, maxiter)
-    miniter <= maxiter ||
-        throw(ArgumentError("`miniter = $miniter` exceeds `maxiter = $maxiter`"))
-    return nothing
-end
-
 """
 $(TYPEDEF)
 
@@ -103,7 +96,6 @@ function DMRG(;
         alg_svd = Defaults.alg_svd(), alg_orth = Defaults.alg_orth(),
         backend = Defaults.backend()
     )
-    _check_miniter(miniter, maxiter)
     # single-site DMRG defaults to the per-bond adaptive controller (`AdaptiveKrylov`); pass
     # `alg_eigsolve = (; adaptive = false, ...)` to opt out (the splat overrides the default).
     alg_eigsolve′ = alg_eigsolve isa NamedTuple ?
@@ -237,7 +229,6 @@ function DMRG2(;
         finalize = Defaults._finalize,
         backend = Defaults.backend()
     )
-    _check_miniter(miniter, maxiter)
     # two-site DMRG defaults to the per-bond adaptive controller (`AdaptiveKrylov`); pass
     # `alg_eigsolve = (; adaptive = false, ...)` to opt out (the splat overrides the default).
     alg_eigsolve′ = alg_eigsolve isa NamedTuple ?
@@ -386,6 +377,7 @@ sweep_converged(alg, state::DMRGState) =
 function find_groundstate_sweep!(
         ψ::AbstractFiniteMPS, H, alg::Union{DMRG, DMRG2}, envs, allocator, timeroutput
     )
+    check_miniter(alg)
     log = IterLog(alg)
     it = IterativeSolver(alg, DMRGState(ψ, H, alg, envs, allocator, timeroutput))
 
