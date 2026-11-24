@@ -45,9 +45,12 @@ end
         W1 = MPSKit.DenseMPO(sW1)
         W2 = MPSKit.DenseMPO(sW2)
 
-        ψ1, _ = approximate(ψ0, (sW1, ψ), VOMPS(; verbosity))
-        # VOMPS runs the AC and C projections of a site concurrently, so the allocator serving them
-        # is shared; the serial arm takes the other branch of that choice
+        # VOMPS runs its sites concurrently under a non-serial scheduler, sharing the allocator
+        # between them; both branches are run explicitly. Two chunks force the concurrent branch
+        # even on a single thread, where the default chunk count falls back to running serially.
+        ψ1, _ = with_scheduler(MPSKit.DynamicScheduler(; nchunks = 2)) do
+            return approximate(ψ0, (sW1, ψ), VOMPS(; verbosity))
+        end
         ψ2, _ = with_scheduler(MPSKit.SerialScheduler()) do
             return approximate(ψ0, (W2, ψ), VOMPS(; verbosity))
         end
