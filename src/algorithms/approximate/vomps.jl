@@ -70,37 +70,6 @@ function Base.iterate(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:T
 end
 
 function localupdate_step!(
-        it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, ::SerialScheduler
-    )
-    alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
-    alg_orth = alg_gauge.alg_orth
-
-    ACs = similar(state.mps.AC)
-    dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
-
-    # the sweep is serial, so a single allocator serves all sites
-    allocator = default_allocator(state.mps, SerialScheduler())
-    for site in eachsite(state.mps)
-        AC = map(1:size(state.mps, 1)) do row
-            AC_projection(
-                CartesianIndex(row, site), state.mps, state.operator, state.envs;
-                it.backend, allocator
-            )
-        end
-        circshift!(AC, 1)
-        C = map(1:size(state.mps, 1)) do row
-            C_projection(
-                CartesianIndex(row, site), state.mps, state.operator, state.envs;
-                it.backend, allocator
-            )
-        end
-        circshift!(C, 1)
-        dst_ACs[site] = regauge!(AC, C; alg = alg_orth)
-    end
-
-    return ACs
-end
-function localupdate_step!(
         it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, scheduler
     )
     alg_gauge = adapt_solver(it.alg_gauge; iter = state.iter, g_global = state.ϵ)
@@ -109,35 +78,33 @@ function localupdate_step!(
     ACs = similar(state.mps.AC)
     dst_ACs = state.mps isa Multiline ? eachcol(ACs) : ACs
 
-    # every site - and the AC and C projections within a site - runs concurrently, so the allocator
-    # is shared and has to be one that tolerates that
+    # the allocator is shared between the sites, so it has to tolerate the scheduler running them
+    # concurrently
     allocator = default_allocator(state.mps, scheduler)
     tforeach(eachsite(state.mps); scheduler) do site
-        local AC, C
-        tforeach(1:2; scheduler) do half
-            if isone(half)
-                AC = map(1:size(state.mps, 1)) do row
-                    AC_projection(
-                        CartesianIndex(row, site), state.mps, state.operator, state.envs;
-                        it.backend, allocator
-                    )
-                end
-                circshift!(AC, 1)
-            else
-                C = map(1:size(state.mps, 1)) do row
-                    C_projection(
-                        CartesianIndex(row, site), state.mps, state.operator, state.envs;
-                        it.backend, allocator
-                    )
-                end
-                circshift!(C, 1)
-            end
-        end
-        dst_ACs[site] = regauge!(AC, C; alg = alg_orth)
+        dst_ACs[site] = _localupdate_vomps_step!(
+            site, state.mps, state.operator, state.envs;
+            alg_orth, it.backend, allocator
+        )
         return nothing
     end
 
     return ACs
+end
+
+function _localupdate_vomps_step!(
+        site, mps, operator::Tuple, envs; alg_orth = Defaults.alg_orth(),
+        backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()
+    )
+    AC = map(1:size(mps, 1)) do row
+        AC_projection(CartesianIndex(row, site), mps, operator, envs; backend, allocator)
+    end
+    circshift!(AC, 1)
+    C = map(1:size(mps, 1)) do row
+        C_projection(CartesianIndex(row, site), mps, operator, envs; backend, allocator)
+    end
+    circshift!(C, 1)
+    return regauge!(AC, C; alg = alg_orth)
 end
 
 function envs_step!(it::IterativeSolver{<:VOMPS}, state::VOMPSState{<:Any, <:Tuple}, mps)
