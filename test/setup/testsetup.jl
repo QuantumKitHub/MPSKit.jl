@@ -307,7 +307,7 @@ function sixvertex(; a = 1.0, b = 1.0, c = 1.0)
         0 b c 0
         0 0 0 a
     ]
-    return InfiniteMPO([permute(TensorMap(d, ℂ^2 ⊗ ℂ^2, ℂ^2 ⊗ ℂ^2), ((1, 2), (4, 3)))])
+    return InfiniteMPO([TensorMap(d, ℂ^2 ⊗ ℂ^2, ℂ^2 ⊗ ℂ^2)])
 end
 
 # Functions for testing DMRG3S
