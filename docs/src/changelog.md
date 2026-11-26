@@ -29,6 +29,11 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+- `approximate` with `VOMPS` no longer throws under a multithreaded scheduler: the AC and C
+  projections of a site were assigned from within nested `tforeach` closures, which OhMyThreads
+  rejects as boxed captures. They are now computed one after the other within each site, as in the
+  other VOMPS and VUMPS local updates; sites still run concurrently.
+
 ### Performance
 
 - Constructing an `MPOHamiltonian` from local operators compiles about twice as fast on
