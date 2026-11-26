@@ -471,8 +471,9 @@ function swap!(
     O₁, O₂ = mpo[i], mpo[i + 1]
 
     if inv
+        # `τ'` must not be the first tensor here (QuantumKitHub/TensorKit.jl#622)
         @plansor O₂₁[-1 -2 -3; -4 -5 -6] :=
-            τ'[-3 -6; 4 5] * O₁[-2 4; 2 1] * O₂[1 5; 3 -5] * τ[2 3; -1 -4]
+            O₁[-2 4; 2 1] * O₂[1 5; 3 -5] * τ[2 3; -1 -4] * τ'[-3 -6; 4 5]
     else
         @plansor O₂₁[-1 -2 -3; -4 -5 -6] :=
             τ[-3 -6; 4 5] * O₁[-2 4; 2 1] * O₂[1 5; 3 -5] * τ'[2 3; -1 -4]
