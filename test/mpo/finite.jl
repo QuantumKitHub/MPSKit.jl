@@ -118,3 +118,20 @@ end
         @test convert(TensorMap, mpo) ≈ O
     end
 end
+
+@testset "swap" begin
+    Vs = (
+        ℂ^2, Vect[FermionParity](0 => 1, 1 => 1),
+        Vect[FibonacciAnyon](:I => 1, :τ => 1),
+    )
+    for V in Vs
+        O = randn(ComplexF64, V ⊗ V ← V ⊗ V)
+        mpo = FiniteMPO(O)
+        # compare the dense operators: `isapprox` on the MPOs is unreliable at its default
+        # tolerance (QuantumKitHub/MPSKit.jl#555)
+        mpo₁ = MPSKit.swap(MPSKit.swap(mpo, 1), 1; inv = true)
+        @test convert(TensorMap, mpo₁) ≈ O
+        mpo₂ = MPSKit.swap(MPSKit.swap(mpo, 1; inv = true), 1)
+        @test convert(TensorMap, mpo₂) ≈ O
+    end
+end
