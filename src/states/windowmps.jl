@@ -150,7 +150,7 @@ end
 function Base.complex(ψ::WindowMPS)
     scalartype(ψ) <: Complex && return ψ
     left_gs = complex(ψ.left_gs)
-    right_gs = ψ.left_gs === ψ.right_gs ? left_gs : complex(right_gs)
+    right_gs = ψ.left_gs === ψ.right_gs ? left_gs : complex(ψ.right_gs)
     return WindowMPS(left_gs, complex(ψ.window), right_gs)
 end
 
